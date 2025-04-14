@@ -46,7 +46,7 @@ const ProtectedRoute = () => {
   
   // Debug authentication status
   console.log('ProtectedRoute - Auth Check:', { 
-    isAuthenticated: isAuthenticated(), 
+    isAuthenticated: !isAuthenticated(), 
     currentUser: currentUser ? 'Exists' : 'Null' 
   });
   

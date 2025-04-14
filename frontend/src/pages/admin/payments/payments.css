@@ -1,0 +1,403 @@
+/* Payments.css - Modern styling for Payments management */
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-scale {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+/* Form Elements */
+.form-input {
+  @apply w-full px-4 py-2 rounded-lg border border-white/10 
+  bg-white/5 text-white placeholder-gray-400 outline-none
+  focus:ring-2 focus:ring-blue-500/40 focus:border-transparent
+  transition duration-200;
+}
+
+.form-input option {
+  @apply bg-slate-800 text-white;
+}
+
+.form-checkbox {
+  @apply w-4 h-4 accent-blue-600 bg-white/10 border-white/20 
+  rounded focus:ring-blue-500/40;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 
+  hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg 
+  shadow-md hover:shadow-lg transition-all duration-200
+  disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg 
+  shadow-md hover:shadow-lg border border-white/10 hover:border-white/20
+  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.icon-btn {
+  @apply p-2 rounded-full transition-all duration-200 
+  hover:shadow-lg flex items-center justify-center;
+}
+
+.icon-info {
+  @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 hover:text-blue-200;
+}
+
+.icon-success {
+  @apply bg-green-500/20 text-green-300 hover:bg-green-500/30 hover:text-green-200;
+}
+
+.icon-danger {
+  @apply bg-red-500/20 text-red-300 hover:bg-red-500/30 hover:text-red-200;
+}
+
+/* Table Styles */
+.table-container {
+  @apply bg-white/5 backdrop-blur-sm rounded-xl shadow-xl border border-white/10 overflow-hidden;
+}
+
+.table-header {
+  @apply bg-gradient-to-r from-slate-700/50 to-slate-800/50 text-white uppercase;
+}
+
+.table-row {
+  @apply hover:bg-white/5 transition-colors duration-150;
+}
+
+/* Utility Classes for Tailwind JIT */
+@tailwind utilities;
+
+.filter {
+  filter: var(--tw-filter);
+}
+
+.blur-3xl {
+  --tw-blur: blur(64px);
+  filter: var(--tw-filter);
+}
+
+.mix-blend-multiply {
+  mix-blend-mode: multiply;
+}
+
+/* Form Container */
+form {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    margin: 20px auto;
+}
+
+/* Label Styles */
+label {
+    font-size: 14px;
+    color: #555;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Input Field Styling */
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border 0.3s ease-in-out;
+}
+
+input:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* Submit Button */
+button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 500px) {
+    form {
+        width: 90%;
+    }
+}
+/* Table Container */
+.table-container {
+    margin: 20px;
+    overflow-x: auto;
+}
+
+/* Payment Table */
+.payment-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+}
+
+.payment-table th, .payment-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.payment-table th {
+    background-color: #f4f4f4;
+    color: #333;
+    font-weight: bold;
+}
+
+.payment-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Button Styles */
+.btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.btn.refresh-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+}
+
+.btn.refresh-btn:hover {
+    background-color: #218838;
+}
+
+.btn.add-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+}
+
+.btn.add-btn:hover {
+    background-color: #0056b3;
+}
+
+.btn.edit-btn {
+    background-color: #ffc107;
+    color: white;
+    border: none;
+}
+
+.btn.edit-btn:hover {
+    background-color: #e0a800;
+}
+
+.btn.delete-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+.btn.delete-btn:hover {
+    background-color: #c82333;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.edit-modal {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.cancel-btn, .save-btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: #e53935;
+}
+
+.save-btn {
+    background-color: #4caf50;
+    color: white;
+}
+
+.save-btn:hover {
+    background-color: #45a049;
+}
+
+/* Action Cells in Table */
+.action-cells {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+.top-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.search-bar {
+    width: 50%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 12px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.refresh-btn {
+    background-color: #007bff;
+    color: white;
+}
+
+.add-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.edit-btn {
+    background-color: #ffc107;
+    color: black;
+}
+
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+}
+.search-container {
+    position: relative;
+    width: 300px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 5px 10px;
+}
+
+.search-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+
+.search-bar {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    padding: 5px;
+}

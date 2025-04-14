@@ -1,0 +1,647 @@
+/* Tickets.css - Modern styling for Tickets management */
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-scale {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+/* Form Elements */
+.form-input {
+  @apply w-full px-4 py-2 rounded-lg border border-white/10 
+  bg-white/5 text-white placeholder-gray-400 outline-none
+  focus:ring-2 focus:ring-purple-500/40 focus:border-transparent
+  transition duration-200;
+}
+
+.form-input option {
+  @apply bg-slate-800 text-white;
+}
+
+.form-checkbox {
+  @apply w-4 h-4 accent-purple-600 bg-white/10 border-white/20 
+  rounded focus:ring-purple-500/40;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-600 
+  hover:from-purple-600 hover:to-indigo-700 text-white rounded-lg 
+  shadow-md hover:shadow-lg transition-all duration-200
+  disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg 
+  shadow-md hover:shadow-lg border border-white/10 hover:border-white/20
+  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.icon-btn {
+  @apply p-2 rounded-full transition-all duration-200 
+  hover:shadow-lg flex items-center justify-center;
+}
+
+.icon-info {
+  @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 hover:text-blue-200;
+}
+
+.icon-success {
+  @apply bg-green-500/20 text-green-300 hover:bg-green-500/30 hover:text-green-200;
+}
+
+.icon-danger {
+  @apply bg-red-500/20 text-red-300 hover:bg-red-500/30 hover:text-red-200;
+}
+
+/* Table Styles */
+.table-container {
+  @apply bg-white/5 backdrop-blur-sm rounded-xl shadow-xl border border-white/10 overflow-hidden;
+}
+
+.table-header {
+  @apply bg-gradient-to-r from-slate-700/50 to-slate-800/50 text-white uppercase;
+}
+
+.table-row {
+  @apply hover:bg-white/5 transition-colors duration-150;
+}
+
+/* Loading Component */
+.loading-spinner {
+  @apply fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-black/30 backdrop-blur-sm;
+}
+
+.loading-spinner:before {
+  content: "";
+  @apply w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin;
+}
+
+.loading-spinner:after {
+  content: "Loading...";
+  @apply mt-4 text-lg font-medium text-purple-400;
+}
+
+/* Error Message */
+.error-message {
+  @apply fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm;
+}
+
+.error-message:before {
+  content: "";
+  @apply absolute inset-0 bg-red-900/20 backdrop-blur-sm;
+}
+
+.error-message {
+  @apply relative bg-gradient-to-br from-red-800/50 to-red-900/50 p-8 rounded-xl border border-red-500/20 shadow-lg max-w-md w-full text-white text-center;
+}
+
+/* Utility Classes for Tailwind JIT */
+@tailwind utilities;
+
+.filter {
+  filter: var(--tw-filter);
+}
+
+.blur-3xl {
+  --tw-blur: blur(64px);
+  filter: var(--tw-filter);
+}
+
+.mix-blend-multiply {
+  mix-blend-mode: multiply;
+}
+
+/* Centering the form */
+form {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Styling form elements */
+form div {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+/* Textarea styling */
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Button styling */
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+
+/* ---- Main Container ---- */
+.ticket-management-container {
+    padding: 20px;
+    background-color: #f4f4f4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ---- Header Section ---- */
+.management-header {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.management-header h1 {
+    margin: 0;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 28px;
+}
+
+.header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* ---- Search Container ---- */
+.search-container {
+    position: relative;
+    flex-grow: 1;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 20px 12px 45px;
+    border: none;
+    border-radius: 50px;
+    background-color: #ffffff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    box-shadow: 0 3px 15px rgba(0, 123, 255, 0.15);
+    border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+.search-input::placeholder {
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+    font-size: 18px;
+}
+
+/* ---- Action Buttons (Refresh & Add Ticket) ---- */
+.action-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 16px;  
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    width: auto;
+}
+
+/* Refresh Button */
+.refresh-btn {
+    background-color: #6c5ce7;
+    color: white;
+}
+
+.refresh-btn:hover {
+    background-color: #5649c0;
+    transform: translateY(-2px);
+}
+
+/* Add Ticket Button */
+.add-btn {
+    background-color: #00b894;
+    color: white;
+}
+
+.add-btn:hover {
+    background-color: #00a383;
+    transform: translateY(-2px);
+}
+
+/* Download PDF Button */
+.download-btn {
+    background-color: #f39c12;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.download-btn::before {
+    content: "📄";
+    font-size: 14px;
+}
+
+.download-btn:hover {
+    background-color: #e67e22;
+    transform: translateY(-2px);
+}
+
+/* ---- Table Container ---- */
+.table-container {
+    background: rgba(163, 163, 163, 0.95);
+    padding: 20px;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* Table Styling */
+.ticket-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ticket-table th, 
+.ticket-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.ticket-table th {
+    background-color: #ced3d8;
+    color: #000000;
+    font-weight: bold;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+}
+
+.ticket-table tr:hover td {
+    background-color: #f9fafb;
+}
+
+.ticket-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* No results message */
+.no-results {
+    text-align: center;
+    padding: 30px;
+    color: #718096;
+    font-style: italic;
+}
+
+/* ---- Action Cells ---- */
+.action-cells {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+/* Edit & Delete Buttons */
+.action-cells .btn {
+    width: auto;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.edit-btn {
+    background-color: #4299e1;
+    color: white;
+}
+
+.edit-btn:hover {
+    background-color: #3182ce;
+}
+
+.delete-btn {
+    background-color: #f56565;
+    color: white;
+}
+
+.delete-btn:hover {
+    background-color: #e53e3e;
+}
+
+/* ---- Modal Overlay ---- */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 122%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+}
+
+/* ---- Edit Modal ---- */
+.edit-modal {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    animation: modalFadeIn 0.3s ease forwards;
+    height: 100%;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.edit-modal h2 {
+    color: #2d3748;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 600;
+}
+
+/* Form Groups */
+.form-group {
+    margin-bottom: 0;
+    text-align: left;
+}
+
+.modal-actions{
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.modal-actions .btn {
+    width: auto;
+    padding: 10px 20px;
+}
+
+.modal-actions .cancel-btn {
+    background-color: #e2e8f0;
+    color: #4a5568;
+}
+
+.modal-actions .cancel-btn:hover {
+    background-color: #cbd5e0;
+}
+
+.modal-actions .save-btn {
+    background-color: #4299e1;
+    color: white;
+}
+
+.modal-actions .save-btn:hover {
+    background-color: #3182ce;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-container {
+        max-width: 100%;
+    }
+    
+    .action-buttons {
+        justify-content: space-between;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+
+    }
+    
+    .ticket-table th, 
+    .ticket-table td {
+        padding: 12px 10px;
+    }
+}
+
+/* Create Ticket Container Styles */
+.create-ticket-container {
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.create-ticket-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.create-ticket-title {
+    color: #2c3e50;
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.create-ticket-error {
+    background-color: #fff5f5;
+    color: #e53e3e;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Vertical Form Styling */
+.vertical-form {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.form-field {
+    margin-bottom: 20px;
+}
+
+.form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4a5568;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    background-color: #fff;
+}
+
+.form-field textarea {
+    min-height: 120px;
+}
+
+/* Create Ticket Button */
+.create-ticket-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #00b894;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.create-ticket-btn:hover:not(:disabled) {
+    background-color: #00a383;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 184, 148, 0.2);
+}
+
+.create-ticket-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+}

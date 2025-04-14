@@ -1,26 +1,37 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './services/UseAuth.jsx';
+
+// Admin imports
+import AdminDashboard from './admin/pages/Dashboard';
+import AdminUsers from './admin/pages/crud/users/Users';
+import AdminNotes from './admin/pages/crud/notes/Notes';
+import AdminCreateUser from './admin/pages/crud/users/CreateUser';
+import AdminEditUser from './admin/pages/crud/users/EditUser';
+import AdminCreateNote from './admin/pages/crud/notes/CreateNote';
+import AdminEditNote from './admin/pages/crud/notes/EditNote';
+import AdminPayments from './admin/pages/crud/payments/Payments';
+import AdminCreatePayment from './admin/pages/crud/payments/CreatePayment';
+import AdminEditPayment from './admin/pages/crud/payments/EditPayment';
+import AdminTickets from './admin/pages/crud/tickets/Tickets';
+import AdminCreateTicket from './admin/pages/crud/tickets/CreateTicket';
+import AdminEditTicket from './admin/pages/crud/tickets/EditTicket';
+import AdminProfile from './admin/pages/auth/Profile';
+
+// User-side imports
+import UserNotes from './pages/user/notes/UserNotes';
+import CreateUserNote from './pages/user/notes/CreateUserNote';
+import EditUserNote from './pages/user/notes/EditUserNote';
+import UserTickets from './pages/user/tickets/UserTickets';
+import CreateUserTicket from './pages/user/tickets/CreateUserTicket';
+import UserProfile from './pages/user/profile/UserProfile';
+
 import Login from './pages/auth/Login';
-import Dashboard from './pages/Dashboard';
-import Users from './pages/crud/users/Users';
-import Notes from './pages/crud/notes/Notes';
 import AppContainer from './components/layout/AppContainer';
 import ErrorBoundary from './components/ErrorBoundary';
-import CreateUser from './pages/crud/users/CreateUser';
-import EditUser from './pages/crud/users/EditUser';
-import CreateNote from './pages/crud/notes/CreateNote';
-import EditNote from './pages/crud/notes/EditNote';
-import Payments from './pages/crud/payments/Payments';
-import CreatePayment from './pages/crud/payments/CreatePayment';
-import EditPayment from './pages/crud/payments/EditPayment';
-import Tickets from './pages/crud/tickets/Tickets';
-import CreateTicket from './pages/crud/tickets/CreateTicket';
-import EditTicket from './pages/crud/tickets/EditTicket';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
-import Profile from './pages/auth/Profile';
 
 // Import layout components
 import Navbar from './components/navbar';
@@ -78,6 +89,46 @@ const PublicRoute = () => {
   return isAuthenticated() ? <Navigate to="/dashboard" /> : <Outlet />;
 };
 
+// User route component to check if user role is 'user'
+const UserRoute = () => {
+  const { currentUser, isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // Check if authenticated and has user role
+  if (!isAuthenticated() || !currentUser || currentUser.role !== 'user') {
+    return <Navigate to="/login" />;
+  }
+  
+  return <Outlet />;
+};
+
+// Admin route component to check if user role is 'admin'
+const AdminRoute = () => {
+  const { currentUser, isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // Check if authenticated and has admin role
+  if (!isAuthenticated() || !currentUser || currentUser.role !== 'admin') {
+    return <Navigate to="/not-authorized" />;
+  }
+  
+  return <Outlet />;
+};
+
 const App = () => {
   return (
     <Router>
@@ -92,42 +143,90 @@ const App = () => {
               <Route path="/reset-password" element={<ResetPassword />} />
             </Route>
             
-            {/* Protected Routes */}
+            <Route path="/not-authorized" element={<NotAutherized />} />
+            
+            {/* Admin Protected Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route element={<AppContainer />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/profile" element={<Profile />} />
-                
-                {/* Users */}
-                <Route path="/users" element={<Users />} />
-                <Route path="/create-user" element={<CreateUser />} />
-                <Route path="/users/edit/:id" element={<EditUser />} />
-                
-                {/* Notes */}
-                <Route path="/notes" element={<Notes />} />
-                <Route path="/create-note" element={<CreateNote />} />
-                <Route path="/notes/edit/:id" element={<EditNote />} />
-                
-                {/* Payments */}
-                <Route path="/payments" element={<Payments />} />
-                <Route path="/payments/create" element={<CreatePayment />} />
-                <Route path="/payments/edit/:id" element={<EditPayment />} />
-                
-                {/* Tickets */}
-                <Route path="/tickets" element={<Tickets />} />
-                <Route path="/tickets/create" element={<CreateTicket />} />
-                <Route path="/tickets/edit/:id" element={<EditTicket />} />
+              <Route element={<AdminRoute />}>
+                <Route element={<AppContainer />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/admin/profile" element={<AdminProfile />} />
+                  
+                  {/* Users */}
+                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/users/create" element={<AdminCreateUser />} />
+                  <Route path="/admin/users/edit/:id" element={<AdminEditUser />} />
+                  
+                  {/* Notes */}
+                  <Route path="/admin/notes" element={<AdminNotes />} />
+                  <Route path="/admin/notes/create" element={<AdminCreateNote />} />
+                  <Route path="/admin/notes/edit/:id" element={<AdminEditNote />} />
+                  
+                  {/* Payments */}
+                  <Route path="/admin/payments" element={<AdminPayments />} />
+                  <Route path="/admin/payments/create" element={<AdminCreatePayment />} />
+                  <Route path="/admin/payments/edit/:id" element={<AdminEditPayment />} />
+                  
+                  {/* Tickets */}
+                  <Route path="/admin/tickets" element={<AdminTickets />} />
+                  <Route path="/admin/tickets/create" element={<AdminCreateTicket />} />
+                  <Route path="/admin/tickets/edit/:id" element={<AdminEditTicket />} />
+                </Route>
               </Route>
             </Route>
             
-            {/* Default Redirect */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* User Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<UserRoute />}>
+                <Route element={<AppContainer />}>
+                  <Route path="/user/profile" element={<UserProfile />} />
+                  
+                  {/* User Notes */}
+                  <Route path="/user/notes" element={<UserNotes />} />
+                  <Route path="/user/notes/create" element={<CreateUserNote />} />
+                  <Route path="/user/notes/edit/:noteId" element={<EditUserNote />} />
+                  
+                  {/* User Tickets */}
+                  <Route path="/user/tickets" element={<UserTickets />} />
+                  <Route path="/user/tickets/create" element={<CreateUserTicket />} />
+                </Route>
+              </Route>
+            </Route>
+            
+            {/* Default Redirect - Check role and redirect accordingly */}
+            <Route path="/" element={
+              <RoleBasedRedirect />
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ErrorBoundary>
       </AuthProvider>
     </Router>
   );
+};
+
+// Component to redirect based on user role
+const RoleBasedRedirect = () => {
+  const { currentUser, isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Redirect based on user role
+  if (currentUser?.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  } else {
+    return <Navigate to="/user/notes" replace />;
+  }
 };
 
 export default App;

@@ -8,7 +8,6 @@ import {
     FaPlus, FaCheck, FaTimes, FaInfoCircle, FaStickyNote,
     FaSpinner, FaRedo, FaSave, FaFilter, FaSort
 } from 'react-icons/fa';
-import './Notes.css';
 
 const Notes = () => {
     const [notes, setNotes] = useState([]);

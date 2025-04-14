@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../services/UseAuth.jsx';
-import api from '../services/api';
+import { useAuth } from '../../services/UseAuth.jsx';
+import api from '../../services/api';
 import { 
-  FaStickyNote, FaTicketAlt, FaUser,
+  FaUsers, FaStickyNote, FaCreditCard, FaTicketAlt,
   FaChartLine, FaClipboardCheck, FaBell, FaCalendarAlt,
   FaSpinner
 } from 'react-icons/fa';
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
-  const [userStats, setUserStats] = useState({
-    myNotes: 0,
-    myTickets: 0,
-    openTickets: 0,
-    completedTickets: 0
+  const [stats, setStats] = useState({
+    users: 0,
+    notes: 0,
+    payments: 0,
+    tickets: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,48 +22,48 @@ const Dashboard = () => {
   const [activityLoading, setActivityLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchStats = async () => {
       try {
         setLoading(true);
-        // Fetch real stats for the current user from the API
+        // Fetch real stats from the API
         const responses = await Promise.all([
-          api.get('/api/notes/user'),
-          api.get('/api/tickets/user'),
-          api.get('/api/tickets/user/status/open'),
-          api.get('/api/tickets/user/status/completed')
+          api.get('/api/users/count'),
+          api.get('/api/notes/count'),
+          api.get('/api/payments/count'),
+          api.get('/api/tickets/count')
         ]);
         
-        setUserStats({
-          myNotes: responses[0].data.length,
-          myTickets: responses[1].data.length,
-          openTickets: responses[2].data.length,
-          completedTickets: responses[3].data.length
+        setStats({
+          users: responses[0].data.count,
+          notes: responses[1].data.count,
+          payments: responses[2].data.count,
+          tickets: responses[3].data.count
         });
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching user dashboard stats:', err);
-        setError('Failed to load your dashboard statistics. Please try again later.');
+        console.error('Error fetching dashboard stats:', err);
+        setError('Failed to load dashboard statistics. Please try again later.');
         setLoading(false);
         
         // Fallback to some default values if API fails
-        setUserStats({
-          myNotes: 0,
-          myTickets: 0,
-          openTickets: 0,
-          completedTickets: 0
+        setStats({
+          users: 0,
+          notes: 0,
+          payments: 0,
+          tickets: 0
         });
       }
     };
 
-    const fetchUserActivity = async () => {
+    const fetchActivity = async () => {
       try {
         setActivityLoading(true);
-        // Fetch recent activity for current user from the API
-        const response = await api.get('/api/activity/user');
+        // Fetch recent activity from the API
+        const response = await api.get('/api/activity/recent');
         setRecentActivity(response.data);
         setActivityLoading(false);
       } catch (err) {
-        console.error('Error fetching user activity:', err);
+        console.error('Error fetching recent activity:', err);
         // Fallback to empty activity list
         setRecentActivity([]);
         setActivityLoading(false);
@@ -71,13 +71,13 @@ const Dashboard = () => {
     };
 
     // Execute both fetches
-    fetchUserData();
-    fetchUserActivity();
+    fetchStats();
+    fetchActivity();
     
     // Set up a refresh interval (every 5 minutes)
     const refreshInterval = setInterval(() => {
-      fetchUserData();
-      fetchUserActivity();
+      fetchStats();
+      fetchActivity();
     }, 5 * 60 * 1000);
     
     // Clean up interval on component unmount
@@ -87,63 +87,64 @@ const Dashboard = () => {
   // Stat cards data
   const statCards = [
     { 
-      title: 'My Notes', 
-      count: userStats.myNotes, 
-      icon: <FaStickyNote className="text-yellow-400" size={24} />,
-      link: '/user/notes',
-      color: 'from-yellow-500/20 to-amber-500/20',
-      textColor: 'text-yellow-300'
-    },
-    { 
-      title: 'My Tickets', 
-      count: userStats.myTickets, 
-      icon: <FaTicketAlt className="text-purple-400" size={24} />,
-      link: '/user/tickets',
-      color: 'from-purple-500/20 to-pink-500/20',
-      textColor: 'text-purple-300'
-    },
-    { 
-      title: 'Open Tickets', 
-      count: userStats.openTickets, 
-      icon: <FaTicketAlt className="text-blue-400" size={24} />,
-      link: '/user/tickets?status=open',
+      title: 'Users', 
+      count: stats.users, 
+      icon: <FaUsers className="text-blue-400" size={24} />,
+      link: '/admin/users',
       color: 'from-blue-500/20 to-indigo-500/20',
       textColor: 'text-blue-300'
     },
     { 
-      title: 'Completed', 
-      count: userStats.completedTickets, 
-      icon: <FaTicketAlt className="text-green-400" size={24} />,
-      link: '/user/tickets?status=completed',
+      title: 'Notes', 
+      count: stats.notes, 
+      icon: <FaStickyNote className="text-yellow-400" size={24} />,
+      link: '/admin/notes',
+      color: 'from-yellow-500/20 to-amber-500/20',
+      textColor: 'text-yellow-300'
+    },
+    { 
+      title: 'Payments', 
+      count: stats.payments, 
+      icon: <FaCreditCard className="text-green-400" size={24} />,
+      link: '/admin/payments',
       color: 'from-green-500/20 to-emerald-500/20',
       textColor: 'text-green-300'
+    },
+    { 
+      title: 'Tickets', 
+      count: stats.tickets, 
+      icon: <FaTicketAlt className="text-purple-400" size={24} />,
+      link: '/admin/tickets',
+      color: 'from-purple-500/20 to-pink-500/20',
+      textColor: 'text-purple-300'
     }
   ];
 
   // Fallback recent activity data if API fails
   const fallbackActivity = [
-    { id: 1, type: 'note', action: 'You created a new note', time: '10 minutes ago', icon: <FaStickyNote className="text-yellow-400" /> },
-    { id: 2, type: 'ticket', action: 'You submitted a new ticket', time: '30 minutes ago', icon: <FaTicketAlt className="text-purple-400" /> },
-    { id: 3, type: 'ticket', action: 'Your ticket was updated', time: '1 hour ago', icon: <FaTicketAlt className="text-blue-400" /> },
-    { id: 4, type: 'profile', action: 'You updated your profile', time: '2 hours ago', icon: <FaUser className="text-green-400" /> },
+    { id: 1, type: 'user', action: 'New user registered', time: '10 minutes ago', icon: <FaUsers className="text-blue-400" /> },
+    { id: 2, type: 'note', action: 'New note created', time: '30 minutes ago', icon: <FaStickyNote className="text-yellow-400" /> },
+    { id: 3, type: 'payment', action: 'Payment processed', time: '1 hour ago', icon: <FaCreditCard className="text-green-400" /> },
+    { id: 4, type: 'ticket', action: 'Ticket resolved', time: '2 hours ago', icon: <FaTicketAlt className="text-purple-400" /> },
   ];
 
   // Activity data with icon mapping
   const getActivityIcon = (type) => {
     switch (type) {
+      case 'user': return <FaUsers className="text-blue-400" />;
       case 'note': return <FaStickyNote className="text-yellow-400" />;
+      case 'payment': return <FaCreditCard className="text-green-400" />;
       case 'ticket': return <FaTicketAlt className="text-purple-400" />;
-      case 'profile': return <FaUser className="text-green-400" />;
       default: return <FaBell className="text-gray-400" />;
     }
   };
 
   // Quick links
   const quickLinks = [
-    { title: 'Create Note', icon: <FaStickyNote />, link: '/user/notes/create', color: 'bg-yellow-500/20 text-yellow-300' },
-    { title: 'Submit Ticket', icon: <FaTicketAlt />, link: '/user/tickets/create', color: 'bg-purple-500/20 text-purple-300' },
-    { title: 'My Profile', icon: <FaUser />, link: '/user/profile', color: 'bg-blue-500/20 text-blue-300' },
-    { title: 'Calendar', icon: <FaCalendarAlt />, link: '/user/calendar', color: 'bg-green-500/20 text-green-300' },
+    { title: 'Analytics', icon: <FaChartLine />, link: '/admin/analytics', color: 'bg-blue-500/20 text-blue-300' },
+    { title: 'Tasks', icon: <FaClipboardCheck />, link: '/admin/tasks', color: 'bg-green-500/20 text-green-300' },
+    { title: 'Notifications', icon: <FaBell />, link: '/admin/notifications', color: 'bg-yellow-500/20 text-yellow-300' },
+    { title: 'Calendar', icon: <FaCalendarAlt />, link: '/admin/calendar', color: 'bg-purple-500/20 text-purple-300' },
   ];
 
   // Function to format date from ISO string
@@ -178,10 +179,10 @@ const Dashboard = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-          My Dashboard
+          Dashboard
         </h1>
         <p className="text-gray-400 mt-2">
-          Welcome{currentUser ? `, ${currentUser.name || currentUser.email || 'User'}` : ''}! Here's an overview of your activity.
+          Welcome back{currentUser ? `, ${currentUser.name || currentUser.email || 'Admin'}` : ''}! Here's an overview of your system.
         </p>
       </div>
 
@@ -216,7 +217,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-white mb-1">{stat.count}</div>
-                <div className="text-xs text-gray-400">View all</div>
+                <div className="text-xs text-gray-400">View all {stat.title.toLowerCase()}</div>
               </div>
             </Link>
           ))
@@ -228,7 +229,7 @@ const Dashboard = () => {
         <div className="lg:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-xl border border-white/10 overflow-hidden">
           <div className="p-6">
             <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
-              My Recent Activity
+              Recent Activity
             </h2>
             <div className="space-y-4">
               {activityLoading ? (
@@ -277,7 +278,7 @@ const Dashboard = () => {
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-xl border border-white/10 overflow-hidden">
           <div className="p-6">
             <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
-              Quick Actions
+              Quick Links
             </h2>
             <div className="grid grid-cols-2 gap-4">
               {quickLinks.map((link, index) => (

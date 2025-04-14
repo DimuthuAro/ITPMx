@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../services/UseAuth.jsx';
-import api from '../services/api';
+import { useAuth } from '../../services/UseAuth.jsx';
+import api from '../../services/api.js';
 import { 
   FaStickyNote, FaTicketAlt, FaUser,
   FaChartLine, FaClipboardCheck, FaBell, FaCalendarAlt,

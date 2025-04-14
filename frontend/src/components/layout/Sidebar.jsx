@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../services/UseAuth.jsx';
 import { 
   FaHome, 
   FaUsers, 
@@ -10,7 +11,11 @@ import {
   FaBell, 
   FaSignOutAlt,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaUserCircle,
+  FaClipboardList,
+  FaQuestionCircle,
+  FaBookmark
 } from 'react-icons/fa';
 
 const MenuItem = ({ icon, label, to, active }) => (
@@ -30,16 +35,53 @@ const MenuItem = ({ icon, label, to, active }) => (
 const Sidebar = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [userRole, setUserRole] = useState('user');
+  const [username, setUsername] = useState('');
   
-  const menuItems = [
-    { icon: <FaHome />, label: 'Dashboard', to: '/dashboard' },
-    { icon: <FaUsers />, label: 'User Management', to: '/users' },
-    { icon: <FaTicketAlt />, label: 'Tickets', to: '/tickets' },
-    { icon: <FaMoneyBillWave />, label: 'Payments', to: '/payments' },
-    { icon: <FaChartBar />, label: 'Analytics', to: '/analytics' },
-    { icon: <FaBell />, label: 'Notifications', to: '/notifications' },
-    { icon: <FaCog />, label: 'Settings', to: '/settings' },
+  // Get user data from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUserRole(parsedUser.role || 'user');
+        setUsername(parsedUser.username || parsedUser.email || 'User');
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
+  // Admin menu items
+  const adminMenuItems = [
+    { icon: <FaHome />, label: 'Dashboard', to: '/admin/dashboard' },
+    { icon: <FaUsers />, label: 'User Management', to: '/admin/users' },
+    { icon: <FaTicketAlt />, label: 'Tickets', to: '/admin/tickets' },
+    { icon: <FaMoneyBillWave />, label: 'Payments', to: '/admin/payments' },
+    { icon: <FaClipboardList />, label: 'Notes', to: '/admin/notes' },
+    { icon: <FaChartBar />, label: 'Analytics', to: '/admin/analytics' },
+    { icon: <FaCog />, label: 'Settings', to: '/admin/settings' },
   ];
+  
+  // User menu items
+  const userMenuItems = [
+    { icon: <FaHome />, label: 'Dashboard', to: '/user/dashboard' },
+    { icon: <FaUserCircle />, label: 'My Profile', to: '/user/profile' },
+    { icon: <FaTicketAlt />, label: 'My Tickets', to: '/user/tickets' },
+    { icon: <FaClipboardList />, label: 'My Notes', to: '/user/notes' },
+    { icon: <FaBookmark />, label: 'Saved Items', to: '/user/saved' },
+    { icon: <FaQuestionCircle />, label: 'Help & Support', to: '/user/support' },
+  ];
+  
+  // Choose menu items based on user role
+  const menuItems = userRole === 'admin' ? adminMenuItems : userMenuItems;
 
   return (
     <div className={`${collapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 z-30 transition-all duration-300`}>
@@ -54,7 +96,7 @@ const Sidebar = () => {
         {/* Sidebar header */}
         <div className="flex items-center justify-between mb-8 px-2">
           {!collapsed && (
-            <Link to="/" className="flex items-center">
+            <Link to={userRole === 'admin' ? '/admin/dashboard' : '/user/dashboard'} className="flex items-center">
               <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <span className="text-white font-bold text-lg">IT</span>
               </div>
@@ -62,7 +104,7 @@ const Sidebar = () => {
             </Link>
           )}
           {collapsed && (
-            <Link to="/" className="mx-auto">
+            <Link to={userRole === 'admin' ? '/admin/dashboard' : '/user/dashboard'} className="mx-auto">
               <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <span className="text-white font-bold text-lg">IT</span>
               </div>
@@ -75,6 +117,14 @@ const Sidebar = () => {
             {collapsed ? <FaBars /> : <FaTimes />}
           </button>
         </div>
+        
+        {/* User info */}
+        {!collapsed && (
+          <div className="mb-6 px-4 py-3 bg-white/10 rounded-xl backdrop-blur-sm">
+            <p className="text-white font-medium">{username}</p>
+            <p className="text-xs text-gray-300 capitalize">{userRole} Account</p>
+          </div>
+        )}
         
         {/* Navigation */}
         <nav className="flex-1 space-y-2">
@@ -91,17 +141,17 @@ const Sidebar = () => {
         
         {/* Sidebar footer */}
         <div className="pt-4 mt-6 border-t border-white/10">
-          <Link
-            to="/logout"
+          <button
+            onClick={handleLogout}
             className="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/10 hover:text-white transition-all duration-200"
           >
             <span className="text-lg"><FaSignOutAlt /></span>
             {!collapsed && <span className="font-medium">Sign Out</span>}
-          </Link>
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

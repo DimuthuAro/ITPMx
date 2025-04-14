@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../services/UseAuth.jsx';
-import { FaEnvelope, FaLock, FaSpinner, FaInfoCircle } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaSpinner, FaInfoCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -12,17 +12,12 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showDevHelp, setShowDevHelp] = useState(true);
 
-  const { login, error: authError, setError: setAuthError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   
   // Get the redirect path from location state or default to dashboard
   const from = location.state?.from?.pathname || '/dashboard';
-
-  // Clear auth errors when component mounts
-  useEffect(() => {
-    setAuthError(null);
-  }, [setAuthError]);
 
   // Fill in demo credentials
   const fillDemoCredentials = (type) => {
@@ -37,25 +32,23 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Simple validation
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password');
-      return;
-    }
+    setIsSubmitting(true);
+    setError(null);
     
     try {
-      setError('');
-      setIsSubmitting(true);
+      // Call the enhanced login function from useAuth
+      const result = await login(email, password, remember);
       
-      console.log('Attempting login with:', email);
-      await login(email, password, remember);
-      
-      // Redirect to the page they tried to visit or dashboard
-      navigate(from, { replace: true });
+      if (result.success) {
+        // Redirect based on user role
+        if (result.data.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate(from);
+        }
+      }
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to login. Please check your credentials.');
+      setError(err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,103 +101,116 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => fillDemoCredentials('admin')}
-                  className="px-3 py-2 bg-blue-500/30 hover:bg-blue-500/50 rounded text-center text-sm transition"
+                  className="text-xs bg-blue-500/30 hover:bg-blue-500/40 text-blue-100 py-1.5 px-2 rounded flex items-center justify-center"
                 >
-                  Admin Account
+                  <span>Admin Login</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => fillDemoCredentials('user')}
-                  className="px-3 py-2 bg-blue-500/30 hover:bg-blue-500/50 rounded text-center text-sm transition"
+                  className="text-xs bg-blue-500/30 hover:bg-blue-500/40 text-blue-100 py-1.5 px-2 rounded flex items-center justify-center"
                 >
-                  User Account
+                  <span>User Login</span>
                 </button>
               </div>
-              <p className="mt-2 text-xs text-blue-300">Password for both: password123</p>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit}>
-            <div className="space-y-6">
-              {/* Email Input */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
+            {/* Email field */}
+            <div className="mb-6">
+              <label 
+                htmlFor="email" 
+                className="block text-gray-300 text-sm font-medium mb-2"
+              >
+                Email Address
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <FaEnvelope className="h-4 w-4 text-gray-400" />
+                </span>
+                <input 
+                  id="email" 
+                  name="email" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com" 
+                  required
+                  className="block w-full rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-3 pl-10 text-gray-300 placeholder-gray-500 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            {/* Password field */}
+            <div className="mb-6">
+              <label 
+                htmlFor="password" 
+                className="block text-gray-300 text-sm font-medium mb-2"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <FaLock className="h-4 w-4 text-gray-400" />
+                </span>
+                <input 
+                  id="password" 
+                  name="password" 
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  required
+                  autocomplete="current-password"
+                  className="block w-full rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-3 pl-10 text-gray-300 placeholder-gray-500 transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 pr-12"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <FaEyeSlash className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <FaEye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+            
+            {/* Remember me checkbox */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <input
+                  id="remember"
+                  name="remember"
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
+                />
+                <label htmlFor="remember" className="ml-2 block text-sm text-gray-400">
+                  Remember me
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaEnvelope className="text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-200 placeholder-gray-400"
-                    placeholder="your@email.com"
-                    required
-                  />
-                </div>
               </div>
-              
-              {/* Password Input */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaLock className="text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-12 py-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-gray-200 placeholder-gray-400"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
+                <Link to="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300">
+                  Forgot password?
+                </Link>
               </div>
-              
-              {/* Remember me & Forgot password */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember"
-                    type="checkbox"
-                    checked={remember}
-                    onChange={() => setRemember(!remember)}
-                    className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-slate-600 rounded bg-slate-700"
-                  />
-                  <label htmlFor="remember" className="ml-2 block text-sm text-gray-400">
-                    Remember me
-                  </label>
-                </div>
-                <div className="text-sm">
-                  <Link to="/forgot-password" className="text-blue-400 hover:text-blue-300 transition">
-                    Forgot your password?
-                  </Link>
-                </div>
-              </div>
-              
-              {/* Submit Button */}
-              <div>
+            </div>
+            
+            {/* Login button */}
+            <div className="mt-8">
+              <div className="rounded-lg shadow">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-lg text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 transition-colors duration-200"
+                  className="group relative flex w-full justify-center rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-70"
                 >
                   {isSubmitting ? (
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center">
                       <FaSpinner className="animate-spin mr-2" />
                       <span>Signing in...</span>
                     </div>
@@ -231,4 +237,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import API_BASE_URL from '../../../services/apiConfig';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../services/UseAuth';
 import { 
@@ -15,13 +17,13 @@ import {
 
 const UserProfile = () => {
   const navigate = useNavigate();
-  const { user, updateUser, logout } = useAuth();
+  const { logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
+  const [userData, setUserData] = useState({
+    username: '',
     email: '',
   });
   const [passwordData, setPasswordData] = useState({
@@ -30,29 +32,48 @@ const UserProfile = () => {
     confirmPassword: ''
   });
   const [validationErrors, setValidationErrors] = useState({});
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
-  // Load user data when component mounts
   useEffect(() => {
-    if (!user) {
-      navigate('/auth/login');
-      return;
-    }
-    
-    setFormData({
-      name: user.name || '',
-      email: user.email || '',
-    });
-    setIsLoading(false);
-  }, [user, navigate]);
+    const fetchUserProfile = async () => {
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          setError('You must be logged in to view this page');
+          return;
+        }
+
+        const response = await axios.get(`${API_BASE_URL}/api/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.data.success) {
+          setUserData(response.data.data);
+        } else {
+          setError(response.data.message || 'Failed to load profile');
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        setError('Failed to load profile. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setUserData({
+      ...userData,
       [name]: value
     });
     
-    // Clear validation error when user types
     if (validationErrors[name]) {
       setValidationErrors({
         ...validationErrors,
@@ -68,7 +89,6 @@ const UserProfile = () => {
       [name]: value
     });
     
-    // Clear validation error when user types
     if (validationErrors[name]) {
       setValidationErrors({
         ...validationErrors,
@@ -79,9 +99,9 @@ const UserProfile = () => {
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.name.trim()) errors.name = 'Name is required';
-    if (!formData.email.trim()) errors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email is invalid';
+    if (!userData.username.trim()) errors.username = 'Name is required';
+    if (!userData.email.trim()) errors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(userData.email)) errors.email = 'Email is invalid';
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -99,7 +119,7 @@ const UserProfile = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
@@ -107,20 +127,35 @@ const UserProfile = () => {
     setIsSubmitting(true);
     
     try {
-      // In a real application, this would be an API call to update user profile
-      await updateUser({
-        ...user,
-        name: formData.name,
-        email: formData.email,
-      });
+      const token = localStorage.getItem('auth_token');
+      const response = await axios.put(
+        `${API_BASE_URL}/api/users/${userData.id}`, 
+        {
+          username: userData.username,
+          email: userData.email
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       
-      setIsEditing(false);
-      setValidationErrors({});
+      if (response.data.success) {
+        setMessage('Profile updated successfully');
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        if (storedUser) {
+          const updatedUser = { ...storedUser, ...response.data.data };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        setIsEditing(false);
+        setValidationErrors({});
+      } else {
+        setError(response.data.message || 'Failed to update profile');
+      }
     } catch (err) {
       console.error('Error updating profile:', err);
-      setValidationErrors({
-        form: 'An error occurred while updating your profile. Please try again.'
-      });
+      setError(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setIsSubmitting(false);
     }
@@ -134,8 +169,6 @@ const UserProfile = () => {
     setIsSubmitting(true);
     
     try {
-      // In a real application, this would be an API call to update the password
-      // For now, we'll just simulate a successful password change
       setTimeout(() => {
         setPasswordData({
           currentPassword: '',
@@ -162,7 +195,6 @@ const UserProfile = () => {
     navigate('/auth/login');
   };
 
-  // Display loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -178,13 +210,11 @@ const UserProfile = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 left-1/3 w-64 h-64 bg-blue-600/10 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
         <div className="absolute top-1/2 -right-32 w-64 h-64 bg-purple-600/10 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
       </div>
       
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
           User Profile
@@ -194,18 +224,16 @@ const UserProfile = () => {
         </p>
       </div>
       
-      {/* Profile Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Summary */}
         <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-white/10 rounded-xl p-6 shadow-lg lg:col-span-1">
           <div className="flex flex-col items-center text-center">
             <div className="w-24 h-24 mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-              {user?.name?.charAt(0) || <FaUser />}
+              {userData?.username?.charAt(0) || <FaUser />}
             </div>
-            <h2 className="text-xl font-semibold text-white mb-1">{user?.name}</h2>
+            <h2 className="text-xl font-semibold text-white mb-1">{userData?.username}</h2>
             <p className="text-gray-400 flex items-center">
               <FaEnvelope className="mr-2" />
-              {user?.email}
+              {userData?.email}
             </p>
             <div className="mt-6 w-full space-y-2">
               <button 
@@ -232,52 +260,47 @@ const UserProfile = () => {
           </div>
         </div>
         
-        {/* Main Content Area */}
         <div className="lg:col-span-2">
-          {/* Success Message */}
-          {validationErrors.success && (
+          {message && (
             <div className="mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-green-200">
-              <p>{validationErrors.success}</p>
+              <p>{message}</p>
             </div>
           )}
           
-          {/* Edit Profile Form */}
           {isEditing && (
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-white/10 rounded-xl p-6 shadow-lg mb-6">
               <h3 className="text-xl font-semibold text-white mb-4">Edit Profile</h3>
               
-              {validationErrors.form && (
+              {error && (
                 <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200">
                   <div className="flex items-start">
                     <FaExclamationCircle className="text-red-400 mt-1 mr-2" />
-                    <p>{validationErrors.form}</p>
+                    <p>{error}</p>
                   </div>
                 </div>
               )}
               
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleUpdateProfile}>
                 <div className="space-y-6">
-                  {/* Name Field */}
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-blue-300 mb-2">
+                    <label htmlFor="username" className="block text-sm font-medium text-blue-300 mb-2">
                       Full Name <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
+                      id="username"
+                      name="username"
+                      value={userData.username}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 bg-white/5 border ${
-                        validationErrors.name ? 'border-red-500/50' : 'border-white/10'
+                        validationErrors.username ? 'border-red-500/50' : 'border-white/10'
                       } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent text-white`}
                     />
-                    {validationErrors.name && (
-                      <p className="mt-2 text-sm text-red-400">{validationErrors.name}</p>
+                    {validationErrors.username && (
+                      <p className="mt-2 text-sm text-red-400">{validationErrors.username}</p>
                     )}
                   </div>
                   
-                  {/* Email Field */}
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-blue-300 mb-2">
                       Email Address <span className="text-red-400">*</span>
@@ -286,7 +309,7 @@ const UserProfile = () => {
                       type="email"
                       id="email"
                       name="email"
-                      value={formData.email}
+                      value={userData.email}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 bg-white/5 border ${
                         validationErrors.email ? 'border-red-500/50' : 'border-white/10'
@@ -298,16 +321,11 @@ const UserProfile = () => {
                   </div>
                 </div>
                 
-                {/* Action Buttons */}
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={() => {
                       setIsEditing(false);
-                      setFormData({
-                        name: user.name || '',
-                        email: user.email || ''
-                      });
                       setValidationErrors({});
                     }}
                     className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors"
@@ -339,7 +357,6 @@ const UserProfile = () => {
             </div>
           )}
           
-          {/* Change Password Form */}
           {showPasswordChange && (
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-white/10 rounded-xl p-6 shadow-lg">
               <h3 className="text-xl font-semibold text-white mb-4">Change Password</h3>
@@ -355,7 +372,6 @@ const UserProfile = () => {
               
               <form onSubmit={handlePasswordSubmit}>
                 <div className="space-y-6">
-                  {/* Current Password Field */}
                   <div>
                     <label htmlFor="currentPassword" className="block text-sm font-medium text-blue-300 mb-2">
                       Current Password <span className="text-red-400">*</span>
@@ -375,7 +391,6 @@ const UserProfile = () => {
                     )}
                   </div>
                   
-                  {/* New Password Field */}
                   <div>
                     <label htmlFor="newPassword" className="block text-sm font-medium text-blue-300 mb-2">
                       New Password <span className="text-red-400">*</span>
@@ -395,7 +410,6 @@ const UserProfile = () => {
                     )}
                   </div>
                   
-                  {/* Confirm Password Field */}
                   <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-blue-300 mb-2">
                       Confirm Password <span className="text-red-400">*</span>
@@ -416,7 +430,6 @@ const UserProfile = () => {
                   </div>
                 </div>
                 
-                {/* Action Buttons */}
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
                     type="button"
@@ -458,7 +471,6 @@ const UserProfile = () => {
             </div>
           )}
           
-          {/* Account Summary (when not editing) */}
           {!isEditing && !showPasswordChange && (
             <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-white/10 rounded-xl p-6 shadow-lg">
               <h3 className="text-xl font-semibold text-white mb-6">Account Information</h3>
@@ -469,7 +481,7 @@ const UserProfile = () => {
                     <FaUser className="text-blue-400" />
                     <span className="text-sm font-medium text-blue-300">Full Name</span>
                   </div>
-                  <p className="text-white text-lg pl-6">{user?.name}</p>
+                  <p className="text-white text-lg pl-6">{userData?.username}</p>
                 </div>
                 
                 <div>
@@ -477,7 +489,7 @@ const UserProfile = () => {
                     <FaEnvelope className="text-blue-400" />
                     <span className="text-sm font-medium text-blue-300">Email Address</span>
                   </div>
-                  <p className="text-white text-lg pl-6">{user?.email}</p>
+                  <p className="text-white text-lg pl-6">{userData?.email}</p>
                 </div>
                 
                 <div>

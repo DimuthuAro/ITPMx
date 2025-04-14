@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../services/UseAuth.jsx';
+import axios from 'axios';
+import API_BASE_URL from '../../services/apiConfig';
 import { FaUser, FaEnvelope, FaLock, FaCheck, FaSpinner } from 'react-icons/fa';
 
 const Register = () => {
@@ -14,7 +15,6 @@ const Register = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  const { register } = useAuth();
   const navigate = useNavigate();
   
   const handleChange = (e) => {
@@ -27,50 +27,41 @@ const Register = () => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate form inputs
-    if (!formData.name.trim()) {
-      setError('Please enter your full name');
-      return;
-    }
-    
-    if (!formData.email.trim()) {
-      setError('Please enter your email address');
-      return;
-    }
-    
-    if (!formData.password.trim()) {
-      setError('Please enter a password');
-      return;
-    }
-    
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-    
+
+    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
+
+    // Basic validation
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('Please fill out all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      setError('');
-      setIsSubmitting(true);
-      
-      // Call register function from auth context
-      await register({
-        name: formData.name,
+      // Register the user
+      const response = await axios.post(`${API_BASE_URL}/api/register`, {
+        username: formData.name,
         email: formData.email,
         password: formData.password
       });
-      
-      // Redirect to login page after successful registration
-      navigate('/login', { 
-        state: { message: 'Registration successful! Please log in with your new account.' } 
-      });
+
+      if (response.data.success) {
+        // Store auth token and user data
+        localStorage.setItem('auth_token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data));
+        navigate('/dashboard');
+      } else {
+        setError(response.data.message || 'Registration failed');
+      }
     } catch (err) {
-      setError(err.message || 'Failed to register. Please try again.');
+      console.error('Registration error:', err);
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -258,4 +249,4 @@ const Register = () => {
   );
 };
 
-export default Register; 
+export default Register;

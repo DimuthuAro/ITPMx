@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useState } from 'react';
+import API_BASE_URL from '../../../services/apiConfig';
 
 const CreateNote = () => {
     const [formData, setFormData] = useState({
@@ -48,7 +49,7 @@ const CreateNote = () => {
         console.log('Form data:', formData);
         setLoading(true);
         try {
-            const response = await axios.post('http://localhost:3000/api/notes', formData);
+            const response = await axios.post(`${API_BASE_URL}/api/notes`, formData);
             console.log('Note created:', response.data);
             window.location.href = '/notes'; // Redirect after successful creation
         } catch (error) {

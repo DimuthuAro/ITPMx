@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import API_BASE_URL from './apiConfig';
 
-const AuthContext = createContext(null);
+// Create the context
+export const AuthContext = createContext(null);
 
 // Development mode flag - set to false in production
-const DEV_MODE = true; // Force development mode for testing
+const DEV_MODE = false; // Force development mode for testing
 
 // Mock users for development mode
 const MOCK_USERS = [
@@ -12,17 +14,20 @@ const MOCK_USERS = [
     id: 1,
     name: 'Admin User',
     email: 'admin@example.com',
-    role: 'admin'
+    role: 'admin',
+    password: 'password123' // Adding password for mock user verification
   },
   {
     id: 2,
     name: 'Test User',
     email: 'user@example.com',
-    role: 'user'
+    role: 'user',
+    password: 'password123' // Adding password for mock user verification
   }
 ];
 
-export const AuthProvider = ({ children }) => {
+// Create a context provider component
+export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -61,69 +66,112 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       setLoading(true);
       
+      // Input validation
+      if (!email || !password) {
+        console.error('Login failed: Email and password are required');
+        throw new Error('Email and password are required');
+      }
+      
       // Development mode - mock authentication
       if (DEV_MODE) {
         console.log('Using mock authentication in development mode');
-        console.log('Login attempt with:', { email, password: '****' });
+        console.log('Login attempt with:', { email, password });
         
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Simple validation
-        if (!email || !password) {
-          console.error('Login failed: Email and password are required');
-          throw new Error('Email and password are required');
-        }
-        
         // Find mock user
-        const user = MOCK_USERS.find(u => u.email === email);
-        console.log('User found:', user ? 'Yes' : 'No');
+        const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+        console.log('User found:', user ? 'Yes' : 'No')
+        console.log('Email:', email);
         
         // Check if user exists and password is correct (mock check)
-        if (!user || password !== 'password123') {
-          console.error('Login failed: Invalid credentials');
+        if (!user) {
+          console.error('Login failed: User not found');
+          throw new Error('Invalid email or password');
+        }
+        
+        // Compare password (case sensitive)
+        if (user.password !== password) {
+          console.error('Login failed: Password incorrect ' + user.password + ' !== ' + password);
+          console.error('Expected:', user.password, 'Received:', password);
           throw new Error('Invalid email or password');
         }
         
         // Create a mock token
         const token = `mock-jwt-token-${user.id}-${Date.now()}`;
         
-        // Store user data if remember is true
-        if (remember) {
-          localStorage.setItem('auth_token', token);
-          localStorage.setItem('user', JSON.stringify(user));
-        }
+        // Create a safe user object without the password
+        const safeUser = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        };
         
         // Set current user
-        console.log('Setting current user:', user);
-        setCurrentUser(user);
+        console.log('Setting current user:', safeUser);
+        setCurrentUser(safeUser);
+        
+        // Set axios default authorization header
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
+        // Store user data and token if remember is true or always in dev mode for testing convenience
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user', JSON.stringify(safeUser));
+        
         console.log('Login successful');
-        return user;
+        return { success: true, data: safeUser };
       }
       
       // Production mode - real authentication
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
-        email,
-        password
-      });
-      
-      const { user, token } = response.data;
-      
-      // Store the token in localStorage if remember is true, otherwise in memory
-      if (remember) {
-        localStorage.setItem('auth_token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+      try {
+        console.log('Attempting real authentication with API');
+        const response = await axios.post(`${API_BASE_URL}/api/login`, {
+          email,
+          password
+        });
+        
+        console.log('Login response:', response.data);
+        
+        if (response.data.success) {
+          const { token, ...userData } = response.data.data;
+          
+          //BUG FIX - Set Real User Data
+          console.log('Setting current user with real data:', userData);
+          const realUserData = await axios.get(`${API_BASE_URL}/api/users/${userData.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          console.log('Real user data:', realUserData.data);
+
+          // Set current user state
+          setCurrentUser(realUserData.data);
+          
+          // Set axios default authorization header
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Store auth data if remember is checked or if explicitly needed
+          if (remember) {
+            localStorage.setItem('auth_token', token);
+            localStorage.setItem('user', JSON.stringify(realUserData.data));
+          }
+          
+          return { success: true, data: realUserData.data };
+        } else {
+          // API returned success: false
+          const errorMessage = response.data.message || 'Invalid credentials';
+          console.error('Login failed:', errorMessage);
+          throw new Error(errorMessage);
+        }
+      } catch (apiError) {
+        // Handle API request errors
+        const errorMessage = apiError.response?.data?.message || apiError.message || 'Failed to login. Please check your credentials.';
+        console.error('API error during login:', errorMessage);
+        throw new Error(errorMessage);
       }
-      
-      // Set auth header for subsequent requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      setCurrentUser(user);
-      return user;
     } catch (err) {
-      const message = err.response?.data?.message || err.message || 'Failed to login. Please check your credentials.';
+      // Set error state and rethrow for component handling
+      const message = err.message || 'An unexpected error occurred during login';
       setError(message);
       throw new Error(message);
     } finally {
@@ -150,7 +198,7 @@ export const AuthProvider = ({ children }) => {
         }
         
         // Check if email exists in mock users
-        if (MOCK_USERS.some(u => u.email === userData.email)) {
+        if (MOCK_USERS.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
           throw new Error('Email already exists');
         }
         
@@ -159,18 +207,45 @@ export const AuthProvider = ({ children }) => {
           id: MOCK_USERS.length + 1,
           name: userData.name,
           email: userData.email,
-          role: 'user'
+          role: 'user',
+          password: userData.password // Store password for mock user
         };
         
         // Add to mock users (in a real app this would persist)
         MOCK_USERS.push(newUser);
         
-        return newUser;
+        // Create a safe version without the password for return
+        const safeUser = {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role
+        };
+        
+        // Create a mock token
+        const token = `mock-jwt-token-${newUser.id}-${Date.now()}`;
+        
+        // Set current user
+        setCurrentUser(safeUser);
+        
+        // Store in localStorage
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user', JSON.stringify(safeUser));
+        
+        return { success: true, data: safeUser };
       }
       
       // Production mode - real registration
-      const response = await axios.post('http://localhost:3000/api/auth/register', userData);
-      return response.data;
+      const response = await axios.post(`${API_BASE_URL}/api/register`, userData);
+      
+      if (response.data.success) {
+        const { token, ...newUser } = response.data.data;
+        setCurrentUser(newUser);
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user', JSON.stringify(newUser));
+        return { success: true, data: newUser };
+      }
+      return { success: false, message: 'Registration failed' };
     } catch (err) {
       const message = err.response?.data?.message || err.message || 'Failed to register. Please try again.';
       setError(message);
@@ -226,7 +301,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Production mode - real profile update
-      const response = await axios.put(`http://localhost:3000/api/users/${currentUser.id}`, userData);
+      const response = await axios.put(`${API_BASE_URL}/api/users/${currentUser.id}`, userData);
       
       const updatedUser = response.data;
       setCurrentUser(updatedUser);
@@ -268,7 +343,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Production mode - real password reset
-      await axios.post('http://localhost:3000/api/auth/reset-password', { email });
+      await axios.post(`${API_BASE_URL}/api/auth/reset-password`, { email });
       return true;
     } catch (err) {
       const message = err.response?.data?.message || err.message || 'Failed to request password reset.';
@@ -301,7 +376,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Production mode - real password reset confirmation
-      await axios.post('http://localhost:3000/api/auth/reset-password/confirm', {
+      await axios.post(`${API_BASE_URL}/api/auth/reset-password/confirm`, {
         token,
         newPassword
       });
@@ -321,7 +396,7 @@ export const AuthProvider = ({ children }) => {
     return !!currentUser;
   };
 
-  const value = {
+  const contextValue = {
     currentUser,
     loading,
     error,
@@ -336,17 +411,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-// Hook to use the auth context
+// Export a custom hook to use the AuthContext
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === null) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider component. Make sure your component is wrapped with AuthProvider.');
   }
   return context;
-}; 
+};

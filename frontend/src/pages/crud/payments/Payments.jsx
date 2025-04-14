@@ -8,7 +8,7 @@ import {
     FaPlus, FaCheck, FaTimes, FaInfoCircle, FaCreditCard,
     FaSpinner, FaRedo, FaSave, FaFilter, FaSort, FaMoneyBillWave
 } from 'react-icons/fa';
-import "./Payments.css";
+
 
 const Payments = () => {
     const [payments, setPayments] = useState([]);

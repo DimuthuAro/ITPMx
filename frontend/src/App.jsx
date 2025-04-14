@@ -51,7 +51,7 @@ const ProtectedRoute = () => {
   });
   
   // If not authenticated, redirect to login
-  if (!isAuthenticated()) {
+  if (isAuthenticated()) {
     console.log('Not authenticated, redirecting to login');
     return <Navigate to="/login" />;
   }

@@ -3,15 +3,18 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
     FaUser, FaStickyNote, FaCreditCard, FaTicketAlt, 
     FaChevronLeft, FaChevronRight, FaSignOutAlt,
-    FaTachometerAlt, FaEnvelope, FaChartBar
+    FaTachometerAlt, FaEnvelope, FaChartBar, FaHome, FaUsers, FaCog
 } from 'react-icons/fa';
+import { useAuth } from '../../services/UseAuth.jsx';
 
 const Sidebar = () => {
     const [collapsed, setCollapsed] = useState(false);
     const [showTooltip, setShowTooltip] = useState(null);
     const location = useLocation();
     const sidebarRef = useRef(null);
-
+    const { currentUser } = useAuth();
+    const [ user, setUser ] = useState({});
+    
     // Close sidebar on outside click on mobile
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -19,21 +22,30 @@ const Sidebar = () => {
                 setCollapsed(true);
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
 
-    const navItems = [
-        { path: '/dashboard', icon: <FaTachometerAlt />, text: 'Dashboard' },
-        { path: '/users', icon: <FaUser />, text: 'Users' },
-        { path: '/notes', icon: <FaStickyNote />, text: 'Notes' },
-        { path: '/mail', icon: <FaEnvelope />, text: 'Mail' },
-        { path: '/reporting', icon: <FaChartBar />, text: 'Reporting' },
-        { path: '/payments', icon: <FaCreditCard />, text: 'Payments' },
-        { path: '/tickets', icon: <FaTicketAlt />, text: 'Tickets' },
+    useEffect(() => {
+        setUser(currentUser.data);
+    }, [currentUser]);
+
+    const getFristLettersFromName = (name) => {
+        if (!name) return '';
+        const names = name.split(' ');
+        return names.map(n => n.charAt(0).toUpperCase()).join('');
+    }
+
+    const navItems = currentUser?.role === 'admin' ? [
+        { path: '/admin/dashboard', icon: <FaHome />, text: 'Dashboard' },
+        { path: '/admin/users', icon: <FaUsers />, text: 'Users' },
+        { path: '/admin/settings', icon: <FaCog />, text: 'Settings' },
+    ] : [
+        { path: '/user/dashboard', icon: <FaHome />, text: 'Dashboard' },
+        { path: '/user/profile', icon: <FaUser />, text: 'Profile' },
+        { path: '/user/tickets', icon: <FaTicketAlt />, text: 'Tickets' },
     ];
 
     return (
@@ -58,12 +70,15 @@ const Sidebar = () => {
                 <div className="mt-4 mb-8">
                     <div className={`flex items-center ${collapsed ? 'justify-center' : 'mb-6'}`}>
                         <div className={`w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg ${collapsed ? 'mx-auto' : 'mr-3'} animate-gradient-x`}>
-                            <span className="text-white text-xl font-bold">IT</span>
+                            <span className="text-white text-xl font-bold">{getFristLettersFromName(user.username) || 'U'}</span>
                         </div>
                         {!collapsed && (
-                            <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 animate-gradient-x">
-                                ITPM Dashboard
-                            </h2>
+                            <div>
+                                <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 animate-gradient-x">
+                                    {user?.username || 'User'}
+                                </h2>
+                                <p className="text-sm text-gray-300">{user?.role || 'Role'}</p>
+                            </div>
                         )}
                     </div>
                 </div>

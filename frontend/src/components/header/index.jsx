@@ -1,10 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaBell, FaSearch, FaUser, FaSun, FaMoon, FaCog } from 'react-icons/fa';
+import api from '../../services/api';
+import { useAuth } from '../../services/UseAuth.jsx';
 
 const Header = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notificationCount] = useState(3);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [user, setUser] = useState({});
+    const { currentUser } = useAuth();
+
+    useEffect(() => {
+        setUser(currentUser.data);
+    }, [currentUser]);
+
+    useEffect(() => {
+        // Fetch notifications
+        api.get('/notifications')
+            .then(response => {
+                setNotifications(response.data.notifications);
+                setNotificationCount(response.data.notifications.length);
+            })
+            .catch(error => {
+                console.error('Error fetching notifications:', error);
+            });
+    }, []);
+
+
+    const getFristLettersFromName = (name) => {
+        if (!name) return '';
+        const names = name.split(' ');
+        return names.map(n => n.charAt(0).toUpperCase()).join('');
+    }
 
     return (
         <header className="fixed top-0 left-0 right-0 h-16 bg-gradient-to-r from-indigo-950/90 via-purple-950/90 to-indigo-950/90 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 py-2 z-40 shadow-lg">
@@ -63,39 +91,19 @@ const Header = () => {
                                 <h3 className="text-white font-bold">Notifications</h3>
                             </div>
                             <div className="max-h-96 overflow-y-auto">
-                                <div className="p-4 border-b border-white/5 hover:bg-white/5 transition-colors">
-                                    <div className="flex items-start">
-                                        <div className="bg-blue-500/20 p-2 rounded-lg mr-3">
-                                            <FaUser className="text-blue-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-white">New user registered</p>
-                                            <p className="text-xs text-indigo-300 mt-1">2 hours ago</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-4 border-b border-white/5 hover:bg-white/5 transition-colors">
-                                    <div className="flex items-start">
-                                        <div className="bg-green-500/20 p-2 rounded-lg mr-3">
-                                            <FaCog className="text-green-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-white">System update completed</p>
-                                            <p className="text-xs text-indigo-300 mt-1">5 hours ago</p>
+                                {notifications.map((notification, index) => (
+                                    <div key={index} className="p-4 border-b border-white/5 hover:bg-white/5 transition-colors">
+                                        <div className="flex items-start">
+                                            <div className="bg-blue-500/20 p-2 rounded-lg mr-3">
+                                                <FaUser className="text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-white">{notification.message}</p>
+                                                <p className="text-xs text-indigo-300 mt-1">{notification.time}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="p-4 hover:bg-white/5 transition-colors">
-                                    <div className="flex items-start">
-                                        <div className="bg-amber-500/20 p-2 rounded-lg mr-3">
-                                            <FaBell className="text-amber-400" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-white">New ticket created</p>
-                                            <p className="text-xs text-indigo-300 mt-1">1 day ago</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                             <div className="p-3 text-center border-t border-white/10">
                                 <button className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
@@ -113,16 +121,16 @@ const Header = () => {
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
                     >
                         <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                            <span className="font-medium text-sm">JD</span>
+                            <span className="font-medium text-sm">{getFristLettersFromName(user.username)}</span>
                         </div>
-                        <span className="hidden md:block text-sm font-medium">John Doe</span>
+                        <span className="hidden md:block text-sm font-medium">{user.name}</span>
                     </button>
 
                     {showProfileMenu && (
                         <div className="absolute right-0 mt-2 w-60 bg-gradient-to-br from-indigo-950/95 to-purple-950/95 border border-indigo-500/20 rounded-xl shadow-xl z-50 backdrop-blur-md animate-fade-in">
                             <div className="p-4 border-b border-white/10">
-                                <h3 className="text-white font-medium">John Doe</h3>
-                                <p className="text-xs text-indigo-300">admin@itpm.com</p>
+                                <h3 className="text-white font-medium">{user.name}</h3>
+                                <p className="text-xs text-indigo-300">{user.email}</p>
                             </div>
                             <div className="p-2">
                                 <button className="w-full text-left px-4 py-2 text-sm text-indigo-200 hover:bg-white/10 rounded-lg transition-colors flex items-center">

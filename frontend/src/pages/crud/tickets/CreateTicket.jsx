@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useState } from 'react';
-import './tickets.css';
 
 const CreateTicket = () => {
     const [formData, setFormData] = useState({

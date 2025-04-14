@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useState } from 'react';
-import './payments.css';
 
 const CreatePayment = () => {
     const [formData, setFormData] = useState({

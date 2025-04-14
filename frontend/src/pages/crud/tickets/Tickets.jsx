@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import './tickets.css';
 // Fix the imports to properly initialize jsPDF with AutoTable
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';

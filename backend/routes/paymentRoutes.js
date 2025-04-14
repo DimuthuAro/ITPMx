@@ -1,13 +1,16 @@
 import express from 'express';
+import Payment from '../models/Payment.js';
+import User from '../models/User.js';
+
 const router = express.Router();
 
 // Validation middleware for payment
 const validatePayment = (req, res, next) => {
-  const { name,email, amount, method, date, user_id } = req.body;
-  if (!name || !email || !amount || !method || !date || !user_id) {
+  const { user, amount, payment_method, description } = req.body;
+  if (!user || !amount || !payment_method) {
     return res.status(400).json({ 
       success: false,
-      message: 'Missing required fields: user_id,name,email, amount, method, date, user_id' 
+      message: 'Missing required fields: user, amount, payment_method' 
     });
   }
   next();
@@ -16,10 +19,11 @@ const validatePayment = (req, res, next) => {
 // GET all payments
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await req.db.query(
-      'SELECT id, name,email, amount, method, date, user_id, created_at FROM payment'
-    );
-    res.json(rows);
+    const payments = await Payment.find().populate('user', 'username email -_id');
+    res.json({
+      success: true,
+      data: payments
+    });
   } catch (error) {
     res.status(500).json({ 
       success: false,
@@ -29,29 +33,59 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET payment by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const payment = await Payment.findById(req.params.id).populate('user', 'username email');
+    
+    if (!payment) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Payment not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: payment
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch payment',
+      error: error.message 
+    });
+  }
+});
+
 // POST create payment
 router.post('/', validatePayment, async (req, res) => {
   try {
-    const { name,email, amount, method, date, user_id } = req.body;
+    const { user, amount, payment_method, description } = req.body;
+    
+    // Verify user exists
+    const userExists = await User.findById(user);
+    if (!userExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
-    const [result] = await req.db.query(
-      'INSERT INTO payment (name,email, amount, method, date, user_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [name,email, amount, method, date, user_id]
-    );
-
+    const newPayment = new Payment({
+      user,
+      amount,
+      payment_method,
+      description,
+      status: 'pending'
+    });
+    
+    const savedPayment = await newPayment.save();
+    
     res.status(201).json({ 
       success: true,
       message: 'Payment created successfully',
-      data: { 
-        id: result.insertId,
-        name,
-        email,
-        amount,
-        method,
-        date,
-        user_id,
-        created_at: new Date() // Assuming created_at is the current timestamp
-      }
+      data: savedPayment
     });
   } catch (error) {
     res.status(500).json({ 
@@ -63,17 +97,28 @@ router.post('/', validatePayment, async (req, res) => {
 });
 
 // PUT update payment
-router.put('/:id', validatePayment, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, amount, method, date, user_id } = req.body;
-
-    const [result] = await req.db.query(
-      'UPDATE payment SET name = ?, email = ?, amount = ?, method = ?, date = ?, user_id = ? WHERE id = ?',
-      [name, email, amount, method, date, user_id, id]
+    const { amount, payment_method, status, description } = req.body;
+    
+    // Build update object
+    const updateData = {};
+    if (amount) updateData.amount = amount;
+    if (payment_method) updateData.payment_method = payment_method;
+    if (status) updateData.status = status;
+    if (description !== undefined) updateData.description = description;
+    
+    // Update updated_at timestamp
+    updateData.updated_at = Date.now();
+    
+    const updatedPayment = await Payment.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
     );
 
-    if (result.affectedRows === 0) {
+    if (!updatedPayment) {
       return res.status(404).json({ 
         success: false,
         message: 'Payment not found' 
@@ -82,7 +127,8 @@ router.put('/:id', validatePayment, async (req, res) => {
 
     res.json({ 
       success: true,
-      message: 'Payment updated successfully' 
+      message: 'Payment updated successfully',
+      data: updatedPayment
     });
   } catch (error) {
     res.status(500).json({ 
@@ -98,12 +144,9 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [result] = await req.db.query(
-      'DELETE FROM payment WHERE id = ?',
-      [id]
-    );
-
-    if (result.affectedRows === 0) {
+    const deletedPayment = await Payment.findByIdAndDelete(id);
+    
+    if (!deletedPayment) {
       return res.status(404).json({ 
         success: false,
         message: 'Payment not found' 

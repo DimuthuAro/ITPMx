@@ -1,5 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import Ticket from '../models/Ticket.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -34,10 +36,10 @@ const authenticateToken = (req, res, next) => {
 
 // Validation middleware for ticket
 const validateTicket = (req, res, next) => {
-  if (!req.body.subject || !req.body.description) {
+  if (!req.body.title || !req.body.description) {
     return res.status(400).json({ 
       success: false,
-      message: 'Missing required fields: subject, description' 
+      message: 'Missing required fields: title, description' 
     });
   }
   next();
@@ -54,21 +56,16 @@ router.get('/all', authenticateToken, async (req, res) => {
       });
     }
 
-    const [rows] = await req.db.query(
-      'SELECT t.id, t.subject, t.description, t.status, t.priority, t.response, ' +
-      't.responded_at, t.created_at, t.updated_at, u.name as user_name, u.email as user_email ' +
-      'FROM ticket t JOIN user u ON t.user_id = u.id ' +
-      'ORDER BY CASE ' +
-      '  WHEN t.status = "urgent" THEN 1 ' +
-      '  WHEN t.status = "open" THEN 2 ' +
-      '  WHEN t.status = "in progress" THEN 3 ' +
-      '  WHEN t.status = "closed" THEN 4 ' +
-      '  ELSE 5 END, t.created_at DESC'
-    );
+    const tickets = await Ticket.find()
+      .populate('user', 'username email')
+      .sort({ 
+        priority: 1, // Sort by priority (urgent first)
+        created_at: -1 // Then by creation date (newest first)
+      });
     
     res.json({
       success: true,
-      data: rows
+      data: tickets
     });
   } catch (error) {
     res.status(500).json({ 
@@ -82,18 +79,14 @@ router.get('/all', authenticateToken, async (req, res) => {
 // GET user's tickets
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     
-    const [rows] = await req.db.query(
-      'SELECT id, subject, description, status, priority, response, ' +
-      'responded_at, created_at, updated_at FROM ticket WHERE user_id = ? ' +
-      'ORDER BY created_at DESC',
-      [userId]
-    );
+    const tickets = await Ticket.find({ user: userId })
+      .sort({ created_at: -1 });
     
     res.json({
       success: true,
-      data: rows
+      data: tickets
     });
   } catch (error) {
     res.status(500).json({ 
@@ -108,25 +101,20 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     
     // First fetch the ticket
-    const [tickets] = await req.db.query(
-      'SELECT * FROM ticket WHERE id = ?',
-      [id]
-    );
+    const ticket = await Ticket.findById(id).populate('user', 'username email');
     
-    if (tickets.length === 0) {
+    if (!ticket) {
       return res.status(404).json({ 
         success: false,
         message: 'Ticket not found' 
       });
     }
     
-    const ticket = tickets[0];
-    
     // Check ownership or admin privilege
-    if (ticket.user_id !== userId && req.user.role !== 'admin') {
+    if (ticket.user._id.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. You do not have permission to view this ticket.' 
@@ -149,41 +137,33 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST create ticket
 router.post('/', authenticateToken, validateTicket, async (req, res) => {
   try {
-    const { subject, description, priority = 'Medium' } = req.body;
-    const userId = req.user.id;
+    const { title, description, priority = 'medium' } = req.body;
+    const userId = req.user._id;
     
     // Get user information for the ticket
-    const [users] = await req.db.query(
-      'SELECT name, email FROM user WHERE id = ?',
-      [userId]
-    );
+    const user = await User.findById(userId);
     
-    if (users.length === 0) {
+    if (!user) {
       return res.status(404).json({ 
         success: false,
         message: 'User not found' 
       });
     }
-    
-    const user = users[0];
 
-    const [result] = await req.db.query(
-      'INSERT INTO ticket (user_id, name, email, subject, description, status, priority) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, user.name, user.email, subject, description, 'Open', priority]
-    );
+    const newTicket = new Ticket({
+      title,
+      description,
+      user: userId,
+      status: 'open',
+      priority
+    });
+    
+    const savedTicket = await newTicket.save();
 
     res.status(201).json({ 
       success: true,
       message: 'Ticket created successfully',
-      data: { 
-        id: result.insertId,
-        subject,
-        description,
-        status: 'Open',
-        priority,
-        user_id: userId,
-        created_at: new Date()
-      }
+      data: savedTicket
     });
   } catch (error) {
     res.status(500).json({ 
@@ -209,57 +189,56 @@ router.patch('/:id/admin', authenticateToken, async (req, res) => {
     }
     
     // Check if ticket exists
-    const [tickets] = await req.db.query(
-      'SELECT id FROM ticket WHERE id = ?',
-      [id]
-    );
+    const ticket = await Ticket.findById(id);
     
-    if (tickets.length === 0) {
+    if (!ticket) {
       return res.status(404).json({ 
         success: false,
         message: 'Ticket not found' 
       });
     }
     
-    // Build update query dynamically based on provided fields
-    const updates = [];
-    const values = [];
+    // Build update object based on provided fields
+    const updateData = {};
     
     if (status !== undefined) {
-      updates.push('status = ?');
-      values.push(status);
+      updateData.status = status;
+      
+      // If status is 'resolved', set resolved_at timestamp
+      if (status === 'resolved') {
+        updateData.resolved_at = Date.now();
+      }
     }
     
     if (priority !== undefined) {
-      updates.push('priority = ?');
-      values.push(priority);
+      updateData.priority = priority;
     }
     
     if (response !== undefined) {
-      updates.push('response = ?');
-      updates.push('responded_at = NOW()');
-      values.push(response);
+      updateData.response = response;
+      updateData.responded_at = Date.now();
     }
     
-    updates.push('updated_at = NOW()');
+    // Update the updated_at timestamp
+    updateData.updated_at = Date.now();
     
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No fields provided for update'
       });
     }
     
-    values.push(id);
-    
-    const [result] = await req.db.query(
-      `UPDATE ticket SET ${updates.join(', ')} WHERE id = ?`,
-      values
+    const updatedTicket = await Ticket.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
     );
 
     res.json({ 
       success: true,
-      message: 'Ticket updated successfully' 
+      message: 'Ticket updated successfully',
+      data: updatedTicket
     });
   } catch (error) {
     res.status(500).json({ 
@@ -274,15 +253,12 @@ router.patch('/:id/admin', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     
-    // First check if ticket exists and belongs to the user
-    const [tickets] = await req.db.query(
-      'SELECT user_id FROM ticket WHERE id = ?',
-      [id]
-    );
+    // First check if ticket exists
+    const ticket = await Ticket.findById(id);
     
-    if (tickets.length === 0) {
+    if (!ticket) {
       return res.status(404).json({ 
         success: false,
         message: 'Ticket not found' 
@@ -290,17 +266,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
     
     // Check ownership or admin privilege
-    if (tickets[0].user_id !== userId && req.user.role !== 'admin') {
+    if (ticket.user.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. You do not have permission to delete this ticket.' 
       });
     }
 
-    const [result] = await req.db.query(
-      'DELETE FROM ticket WHERE id = ?',
-      [id]
-    );
+    await Ticket.findByIdAndDelete(id);
 
     res.json({ 
       success: true,

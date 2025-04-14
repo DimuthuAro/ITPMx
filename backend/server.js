@@ -1,7 +1,7 @@
 // app.js
 import express from 'express';
-import mysql from 'mysql2/promise';
-// Removed unused bcrypt import
+import mongoose from 'mongoose';
+// Removed mysql import
 import dotenv from 'dotenv';
 import cors from 'cors';
 import userRoutes from './routes/userRoutes.js';
@@ -16,22 +16,23 @@ app.use(express.json());
 app.use(cors({
   origin: '*'
 }));
-// Database connection pool
-const pool = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "root",
-  database: "notegenius",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
 
-// Database middleware
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+// Middleware to provide database access
 app.use((req, _, next) => {
-  req.db = pool;
+  req.db = mongoose.connection;
   next();
 });
+
 app.use('/api/users', userRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/payments', paymentRoutes);

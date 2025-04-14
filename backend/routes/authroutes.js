@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { hash, compare } from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 const router = Router();
 
@@ -20,19 +21,14 @@ router.post('/login', async (req, res) => {
         }
 
         // Find user in database
-        const [users] = await req.db.query(
-            'SELECT id, name, email, password, role FROM user WHERE email = ?',
-            [email]
-        );
+        const user = await User.findOne({ email });
 
-        if (users.length === 0) {
+        if (!user) {
             return res.status(401).json({ 
                 success: false,
                 message: 'Invalid credentials' 
             });
         }
-
-        const user = users[0];
 
         // Verify password
         const isPasswordValid = await compare(password, user.password);
@@ -46,8 +42,8 @@ router.post('/login', async (req, res) => {
         // Generate JWT token
         const token = jwt.sign(
             { 
-                id: user.id,
-                name: user.name,
+                _id: user._id,
+                username: user.username,
                 email: user.email,
                 role: user.role || 'user' // Default to 'user' if role is not set
             },
@@ -60,8 +56,8 @@ router.post('/login', async (req, res) => {
             success: true,
             message: 'Login successful',
             data: {
-                id: user.id,
-                name: user.name,
+                id: user._id,
+                username: user.username,
                 email: user.email,
                 role: user.role || 'user',
                 token
@@ -80,42 +76,51 @@ router.post('/login', async (req, res) => {
 // Register route
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { username, email, password } = req.body;
 
-        if (!name || !email || !password) {
+        if (!username || !email || !password) {
             return res.status(400).json({ 
                 success: false,
-                message: 'Name, email, and password are required' 
+                message: 'Username, email, and password are required' 
             });
         }
 
         // Check if email already exists
-        const [existingUsers] = await req.db.query(
-            'SELECT id FROM user WHERE email = ?',
-            [email]
-        );
-
-        if (existingUsers.length > 0) {
+        const emailExists = await User.findOne({ email });
+        if (emailExists) {
             return res.status(409).json({ 
                 success: false,
                 message: 'Email already exists' 
             });
         }
 
+        // Check if username already exists
+        const usernameExists = await User.findOne({ username });
+        if (usernameExists) {
+            return res.status(409).json({ 
+                success: false,
+                message: 'Username already exists' 
+            });
+        }
+
         // Hash password
         const hashedPassword = await hash(password, 12);
 
-        // Insert new user with 'user' role by default
-        const [result] = await req.db.query(
-            'INSERT INTO user (name, email, password, role) VALUES (?, ?, ?, ?)',
-            [name, email, hashedPassword, 'user']
-        );
+        // Create new user
+        const newUser = new User({
+            username,
+            email,
+            password: hashedPassword,
+            role: 'user'
+        });
+        
+        const savedUser = await newUser.save();
 
         // Generate JWT token for automatic login
         const token = jwt.sign(
             { 
-                id: result.insertId,
-                name,
+                _id: savedUser._id,
+                username,
                 email,
                 role: 'user'
             },
@@ -127,8 +132,8 @@ router.post('/register', async (req, res) => {
             success: true,
             message: 'Registration successful',
             data: {
-                id: result.insertId,
-                name,
+                id: savedUser._id,
+                username,
                 email,
                 role: 'user',
                 token
@@ -161,12 +166,9 @@ router.get('/profile', async (req, res) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         
         // Get fresh user data from database
-        const [users] = await req.db.query(
-            'SELECT id, name, email, role FROM user WHERE id = ?',
-            [decoded.id]
-        );
+        const user = await User.findById(decoded._id).select('-password');
 
-        if (users.length === 0) {
+        if (!user) {
             return res.status(404).json({ 
                 success: false,
                 message: 'User not found' 
@@ -175,7 +177,7 @@ router.get('/profile', async (req, res) => {
 
         res.json({
             success: true,
-            data: users[0]
+            data: user
         });
     } catch (error) {
         // Handle expired or invalid token
@@ -220,19 +222,14 @@ router.post('/change-password', async (req, res) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         
         // Get user from database
-        const [users] = await req.db.query(
-            'SELECT id, password FROM user WHERE id = ?',
-            [decoded.id]
-        );
+        const user = await User.findById(decoded._id);
 
-        if (users.length === 0) {
+        if (!user) {
             return res.status(404).json({ 
                 success: false,
                 message: 'User not found' 
             });
         }
-
-        const user = users[0];
 
         // Verify current password
         const isPasswordValid = await compare(currentPassword, user.password);
@@ -246,10 +243,8 @@ router.post('/change-password', async (req, res) => {
         // Hash and update new password
         const hashedPassword = await hash(newPassword, 12);
         
-        await req.db.query(
-            'UPDATE user SET password = ? WHERE id = ?',
-            [hashedPassword, user.id]
-        );
+        user.password = hashedPassword;
+        await user.save();
 
         res.json({
             success: true,
@@ -286,12 +281,9 @@ router.post('/forgot-password', async (req, res) => {
         }
 
         // Find user in database
-        const [users] = await req.db.query(
-            'SELECT id, email FROM user WHERE email = ?',
-            [email]
-        );
+        const user = await User.findOne({ email });
 
-        if (users.length === 0) {
+        if (!user) {
             // Don't reveal whether a user exists for security reasons
             return res.json({ 
                 success: true,
@@ -301,16 +293,15 @@ router.post('/forgot-password', async (req, res) => {
 
         // Generate a reset token
         const resetToken = jwt.sign(
-            { id: users[0].id },
-            JWT_SECRET + users[0].password, // Add user's hashed password to make token invalid after password change
+            { id: user._id },
+            JWT_SECRET + user.password, // Add user's hashed password to make token invalid after password change
             { expiresIn: '1h' }
         );
 
-        // Store reset token in database
-        await req.db.query(
-            'UPDATE user SET reset_token = ?, reset_token_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE id = ?',
-            [resetToken, users[0].id]
-        );
+        // Store reset token in user document
+        user.resetToken = resetToken;
+        user.resetTokenExpires = Date.now() + 3600000; // 1 hour from now
+        await user.save();
         
         // In a real application, send an email with the reset link
         // For development purposes, we'll just return the token
@@ -345,25 +336,15 @@ router.post('/reset-password', async (req, res) => {
         }
 
         // Find user with the reset token
-        const [users] = await req.db.query(
-            'SELECT id, password, reset_token, reset_token_expires FROM user WHERE reset_token = ?',
-            [token]
-        );
+        const user = await User.findOne({ 
+            resetToken: token,
+            resetTokenExpires: { $gt: Date.now() } // Check if token hasn't expired
+        });
 
-        if (users.length === 0) {
+        if (!user) {
             return res.status(400).json({ 
                 success: false,
                 message: 'Invalid or expired reset token' 
-            });
-        }
-
-        const user = users[0];
-
-        // Check if token is expired
-        if (new Date(user.reset_token_expires) < new Date()) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Reset token has expired' 
             });
         }
 
@@ -381,10 +362,10 @@ router.post('/reset-password', async (req, res) => {
         const hashedPassword = await hash(password, 12);
 
         // Update user's password and clear reset token
-        await req.db.query(
-            'UPDATE user SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
-            [hashedPassword, user.id]
-        );
+        user.password = hashedPassword;
+        user.resetToken = undefined;
+        user.resetTokenExpires = undefined;
+        await user.save();
 
         res.json({
             success: true,

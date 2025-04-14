@@ -1,5 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import Note from '../models/Note.js';
 
 const router = express.Router();
 
@@ -54,14 +55,11 @@ router.get('/all', authenticateToken, async (req, res) => {
       });
     }
 
-    const [rows] = await req.db.query(
-      'SELECT n.id, n.title, n.content, n.category, n.created_at, n.updated_at, u.name as user_name ' +
-      'FROM note n JOIN user u ON n.user_id = u.id'
-    );
+    const notes = await Note.find().populate('user', 'username -_id');
     
     res.json({
       success: true,
-      data: rows
+      data: notes
     });
   } catch (error) {
     res.status(500).json({ 
@@ -75,16 +73,13 @@ router.get('/all', authenticateToken, async (req, res) => {
 // GET user's notes
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     
-    const [rows] = await req.db.query(
-      'SELECT id, title, content, category, created_at, updated_at FROM note WHERE user_id = ?',
-      [userId]
-    );
+    const notes = await Note.find({ user: userId });
     
     res.json({
       success: true,
-      data: rows
+      data: notes
     });
   } catch (error) {
     res.status(500).json({ 
@@ -99,25 +94,20 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     
     // First fetch the note
-    const [notes] = await req.db.query(
-      'SELECT * FROM note WHERE id = ?',
-      [id]
-    );
+    const note = await Note.findById(id);
     
-    if (notes.length === 0) {
+    if (!note) {
       return res.status(404).json({ 
         success: false,
         message: 'Note not found' 
       });
     }
     
-    const note = notes[0];
-    
     // Check ownership or admin privilege
-    if (note.user_id !== userId && req.user.role !== 'admin') {
+    if (note.user.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. You do not have permission to view this note.' 
@@ -141,24 +131,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, validateNote, async (req, res) => {
   try {
     const { title, content, category = '' } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
-    const [result] = await req.db.query(
-      'INSERT INTO note (title, content, category, user_id) VALUES (?, ?, ?, ?)',
-      [title, content, category, userId]
-    );
+    const newNote = new Note({
+      title,
+      content,
+      category,
+      user: userId
+    });
+    
+    const savedNote = await newNote.save();
 
     res.status(201).json({ 
       success: true,
       message: 'Note created successfully',
-      data: { 
-        id: result.insertId,
-        title,
-        content,
-        category,
-        user_id: userId,
-        created_at: new Date()
-      }
+      data: savedNote
     });
   } catch (error) {
     res.status(500).json({ 
@@ -173,16 +160,13 @@ router.post('/', authenticateToken, validateNote, async (req, res) => {
 router.patch('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { title, content, category } = req.body;
     
-    // First check if note exists and belongs to the user
-    const [notes] = await req.db.query(
-      'SELECT user_id FROM note WHERE id = ?',
-      [id]
-    );
+    // First check if note exists
+    const note = await Note.findById(id);
     
-    if (notes.length === 0) {
+    if (!note) {
       return res.status(404).json({ 
         success: false,
         message: 'Note not found' 
@@ -190,58 +174,44 @@ router.patch('/:id', authenticateToken, async (req, res) => {
     }
     
     // Check ownership or admin privilege
-    if (notes[0].user_id !== userId && req.user.role !== 'admin') {
+    if (note.user.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. You do not have permission to update this note.' 
       });
     }
     
-    // Build update query dynamically based on provided fields
-    const updates = [];
-    const values = [];
+    // Build update object based on provided fields
+    const updateData = {};
     
     if (title !== undefined) {
-      updates.push('title = ?');
-      values.push(title);
+      updateData.title = title;
     }
     
     if (content !== undefined) {
-      updates.push('content = ?');
-      values.push(content);
+      updateData.content = content;
     }
     
     if (category !== undefined) {
-      updates.push('category = ?');
-      values.push(category);
+      updateData.category = category;
     }
     
-    updates.push('updated_at = NOW()');
+    // Update the updated_at timestamp
+    updateData.updated_at = Date.now();
     
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No fields provided for update'
       });
     }
     
-    values.push(id);
-    
-    const [result] = await req.db.query(
-      `UPDATE note SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Note not found' 
-      });
-    }
+    const updatedNote = await Note.findByIdAndUpdate(id, updateData, { new: true });
 
     res.json({ 
       success: true,
-      message: 'Note updated successfully' 
+      message: 'Note updated successfully',
+      data: updatedNote
     });
   } catch (error) {
     res.status(500).json({ 
@@ -256,15 +226,12 @@ router.patch('/:id', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     
-    // First check if note exists and belongs to the user
-    const [notes] = await req.db.query(
-      'SELECT user_id FROM note WHERE id = ?',
-      [id]
-    );
+    // First check if note exists
+    const note = await Note.findById(id);
     
-    if (notes.length === 0) {
+    if (!note) {
       return res.status(404).json({ 
         success: false,
         message: 'Note not found' 
@@ -272,17 +239,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
     
     // Check ownership or admin privilege
-    if (notes[0].user_id !== userId && req.user.role !== 'admin') {
+    if (note.user.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. You do not have permission to delete this note.' 
       });
     }
 
-    const [result] = await req.db.query(
-      'DELETE FROM note WHERE id = ?',
-      [id]
-    );
+    await Note.findByIdAndDelete(id);
 
     res.json({ 
       success: true,

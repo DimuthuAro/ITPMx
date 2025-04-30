@@ -10,11 +10,10 @@ import UserForm from '../admin/UserForm';
 import TicketForm from '../admin/TicketForm';
 import PaymentForm from '../admin/PaymentForm';
 import NoteForm from '../admin/NoteForm';
-import { useAuth } from '../../context/AuthContext';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const { currentUser, isAdmin } = useAuth();
+  const currentUser = localStorage.getItem('currentUser');
 
   // State for different data types
   const [users, setUsers] = useState([]);
@@ -27,15 +26,9 @@ const AdminPanel = () => {
 
   // Check if user is admin
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
 
-    if (!isAdmin()) {
-      navigate('/dashboard');
-    }
-  }, [currentUser, isAdmin, navigate]);
+    
+  }, [currentUser]);
 
   // State for editing items
   const [editingUser, setEditingUser] = useState(null);

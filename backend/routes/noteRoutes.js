@@ -1,7 +1,13 @@
 import express from 'express';
 import Note from '../models/Note.js';
+import multer from 'multer';
+import Tesseract from 'tesseract.js';
+import fs from 'fs';
 
 const router = express.Router();
+
+// Multer setup for image upload
+const upload = multer({ dest: 'uploads/' });
 
 // Validation middleware for note
 const validateNote = (req, res, next) => {
@@ -203,6 +209,22 @@ router.delete('/:id', async (req, res) => {
       message: 'Failed to delete note',
       error: error.message 
     });
+  }
+});
+
+// OCR scan endpoint
+router.post('/scan', upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No image uploaded' });
+  }
+  try {
+    const imagePath = req.file.path;
+    const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
+    // Optionally, delete the file after processing
+    fs.unlink(imagePath, () => { });
+    res.json({ success: true, text });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'OCR failed', error: error.message });
   }
 });
 

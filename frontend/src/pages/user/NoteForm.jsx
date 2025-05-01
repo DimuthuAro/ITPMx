@@ -1,33 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createNote, getNoteById, updateNote } from '../../services/api';
+import { createNote, getNoteById, updateNote, scanNoteImage } from '../../services/api';
 import UserLayout from '../../components/user/UserLayout';
+import { useAuth } from '../../context/AuthContext';
 
 const NoteForm = () => {
     const { id } = useParams();
     const isEditing = !!id;
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
 
     const [formData, setFormData] = useState({
         title: '',
         content: '',
         category: '',
-    }); const [loading, setLoading] = useState(isEditing);
+    });
+    const [loading, setLoading] = useState(isEditing);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [userId, setUserId] = useState(null);
+    const [scanning, setScanning] = useState(false);
+    const [scanError, setScanError] = useState(null);
 
-    const currentUser = localStorage.getItem('currentUser');
-    // Get user ID from localStorage
-    useEffect(() => {
-        if (currentUser) {
-            const user = JSON.parse(currentUser);
-            setUserId(user.id);
+    // --- Voice to Text (Web Speech API) ---
+    const [isRecording, setIsRecording] = useState(false);
+    const [voiceError, setVoiceError] = useState(null);
+    const recognitionRef = useRef(null);
+
+    const handleStartRecording = () => {
+        setVoiceError(null);
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            setVoiceError('Speech recognition is not supported in this browser.');
+            return;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setFormData(prev => ({ ...prev, content: prev.content + (prev.content ? '\n' : '') + transcript }));
+        };
+        recognition.onerror = (event) => {
+            setVoiceError('Voice recognition error: ' + event.error);
+            setIsRecording(false);
+        };
+        recognition.onend = () => {
+            setIsRecording(false);
+        };
+        recognitionRef.current = recognition;
+        recognition.start();
+        setIsRecording(true);
+    };
+
+    const handleStopRecording = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        setIsRecording(false);
+    }; useEffect(() => {
+        if (currentUser && (currentUser.id || currentUser._id)) {
+            setUserId(currentUser.id || currentUser._id);
         } else {
-            // Redirect to login if no user is found
             navigate('/login');
         }
-    }, [navigate]); 
+    }, [currentUser, navigate]); 
     
     useEffect(() => {
         const fetchNote = async () => {
@@ -77,15 +115,16 @@ const NoteForm = () => {
             }
             if (!formData.content.trim()) {
                 throw new Error('Content is required');
-            }            // Check if user is authenticated
+            }
+            // Check if user is authenticated
             if (!currentUser?.id) {
                 throw new Error('You must be logged in to save a note');
-            }
-
-            // Prepare data including the user ID
+            }            // Prepare data including the user ID (ObjectId string)
             const noteData = {
-                ...formData,
-                user: currentUser.id
+                title: formData.title,
+                content: formData.content,
+                category: formData.category,
+                user: userId // userId is set from AuthContext
             };
 
             if (isEditing) {
@@ -106,6 +145,34 @@ const NoteForm = () => {
 
     const handleBack = () => {
         navigate(isEditing ? `/notes/${id}` : '/dashboard');
+    };
+
+    // OCR image upload handler (optimized)
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file || scanning) return;
+        setScanning(true);
+        setScanError(null);
+        try {
+            const result = await scanNoteImage(file);
+            if (result.success && result.text) {
+                // Only append if not already present
+                setFormData(prev => {
+                    const alreadyIncluded = prev.content.includes(result.text.trim());
+                    return alreadyIncluded
+                        ? prev
+                        : { ...prev, content: prev.content + (prev.content ? '\n' : '') + result.text };
+                });
+            } else {
+                setScanError(result.message || 'Failed to extract text from image.');
+            }
+        } catch (err) {
+            setScanError('OCR failed: ' + (err.message || 'Unknown error'));
+        } finally {
+            setScanning(false);
+            // Reset file input for re-upload
+            if (e.target) e.target.value = '';
+        }
     };
 
     if (loading) {
@@ -176,6 +243,32 @@ const NoteForm = () => {
                             className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                         />
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block text-gray-700 font-medium mb-2">Scan Note Image (OCR)</label>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={scanning} />
+                        {scanning && <div className="text-blue-500 mt-2 animate-pulse">Scanning image...</div>}
+                        {scanError && <div className="text-red-500 mt-2">{scanError}</div>}
+                        {!scanError && !scanning && <div className="text-green-600 text-xs mt-1">You can scan a note image to extract text.</div>}
+                        <div className="text-xs text-gray-500 mt-1">Extracted text will be appended to the Content field only if not already present.</div>
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block text-gray-700 font-medium mb-2">Voice to Text (Speech Recognition)</label>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={isRecording ? handleStopRecording : handleStartRecording}
+                                className={`px-4 py-2 rounded text-white ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                                disabled={isRecording || scanning}
+                            >
+                                {isRecording ? 'Stop Recording' : 'Start Voice Input'}
+                            </button>
+                            {isRecording && <span className="text-red-500 animate-pulse">Listening...</span>}
+                        </div>
+                        {voiceError && <div className="text-red-500 mt-2">{voiceError}</div>}
+                        <div className="text-xs text-gray-500 mt-1">Speak and your words will be added to the Content field.</div>
                     </div>
 
                     <div className="flex items-center justify-between">

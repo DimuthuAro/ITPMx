@@ -15,16 +15,20 @@ const NoteDetail = () => {
     const [isOwner, setIsOwner] = useState(false);
     useEffect(() => {
         const fetchNote = async () => {
-            if (!id || !currentUser?.id) return;
-
+            if (!currentUser) {
+                setError('You must be logged in to delete notes.');
+                return;
+            }
+            if (!id) return;
+            console.log('Fetching note with ID:', id);
             try {
                 setLoading(true);
                 const response = await getNoteById(id);
                 const noteData = response.data || response;
-                setNote(noteData);
+                setNote(noteData);                // Check if current user is the owner of this note
+                const userId = currentUser?.id || currentUser?._id;
+                setIsOwner(noteData.user === userId || noteData.user?._id === userId);
 
-                // Check if current user is the owner of this note
-                setIsOwner(noteData.user === currentUser.id);
             } catch (err) {
                 console.error('Error fetching note:', err);
                 setError('Failed to load note. It might have been deleted or you may not have permission to view it.');

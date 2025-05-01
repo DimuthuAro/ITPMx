@@ -52,7 +52,7 @@ function App() {
             <Route path="/admin" element={<AdminPanel />} />
             {/* Protected User Routes */}
             <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-            <Route path="/notes/:id" element={<ProtectedRoute element={<NoteDetail />} />} />
+            <Route path="/notes/:id" element={<NoteDetail />} />
             <Route path="/notes/create" element={<ProtectedRoute element={<NoteForm />} />} />
             <Route path="/notes/edit/:id" element={<ProtectedRoute element={<NoteForm />} />} />
             <Route path="/profile" element={<ProtectedRoute element={<UserProfile />} />} />

@@ -9,30 +9,29 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const [notes, setNotes] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const fetchNotes = async () => {
             if (!currentUser?.id) return; // Don't fetch if no userId
+            setLoading(true); // Set loading to true before fetching             // Get notes from API
+            await getNotes()
+                .then((response) => {
+                    ; // Set loading to false after fetching
+                    setNotes(response);
+                })
+                .catch((err) => {
+                    console.error('Error fetching notes:', err);
+                    setError('Failed to load notes. Please try again later.');
+                })
+                .finally(() => {
+                    setLoading(false)
+                });
+            console.log('Fetched notes:', notes);
 
-            try {
-                setLoading(true);
-                // Get notes from API
-                const response = await getNotes();
-                // Filter notes belonging to the current user
-                const userNotes = Array.isArray(response)
-                    ? response.filter(note => note.user === currentUser.id)
-                    : [];
-                setNotes(userNotes);
-            } catch (err) {
-                console.error('Error fetching notes:', err);
-                setError('Failed to load notes. Please try again later.');
-            } finally {
-                setLoading(false);
-            }
         };
 
         fetchNotes();
@@ -42,13 +41,13 @@ const Dashboard = () => {
     const categories = [...new Set(notes.map(note => note.category).filter(Boolean))];
 
     // Filter notes based on search term and category
-    const filteredNotes = notes.filter(note => {
-        const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (note.content && note.content.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = categoryFilter ? note.category === categoryFilter : true;
-        return matchesSearch && matchesCategory;
-    });
-
+    const filteredNotes = notes
+        .filter(note => {
+            const titleMatch = note.title.toLowerCase().includes(searchTerm.toLowerCase());
+            const categoryMatch = categoryFilter ? note.category === categoryFilter : true;
+            return titleMatch && categoryMatch;
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by date descending
     return (
         <UserLayout title="My Notes" subtitle="Manage your notes easily">
             <div className="flex flex-col md:flex-row gap-4 mb-6">

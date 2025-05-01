@@ -4,7 +4,7 @@ const API_URL = "http://localhost:3000/api"; // Updated to match your backend po
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 5000,
+  timeout: 3000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -106,7 +106,14 @@ export const getNoteById = async (id) => {
 };
 
 export const createNote = async (noteData) => {
-  const response = await api.post('/notes', noteData);
+  // Ensure user is sent as an ObjectId string
+  const payload = {
+    title: noteData.title,
+    content: noteData.content,
+    category: noteData.category || '',
+    user: noteData.user, // should be userId (ObjectId string)
+  };
+  const response = await api.post('/notes', payload);
   return response.data;
 };
 
@@ -117,6 +124,19 @@ export const updateNote = async (id, noteData) => {
 
 export const deleteNote = async (id) => {
   const response = await api.delete(`/notes/${id}`);
+  return response.data;
+};
+
+// Scan note image and convert to text (OCR)
+export const scanNoteImage = async (imageFile) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  // This endpoint should be implemented in the backend
+  const response = await axios.post(`${API_URL}/notes/scan`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };
 

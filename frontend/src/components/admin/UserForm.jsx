@@ -61,8 +61,8 @@ const UserForm = ({ onUserCreated, onUserUpdated, editingUser, setEditingUser })
                     Add New User
                 </button>
             ) : (
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">Add New User</h3>
+                <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-white">Add New User</h3>
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
                             {error}
@@ -70,7 +70,7 @@ const UserForm = ({ onUserCreated, onUserUpdated, editingUser, setEditingUser })
                     )}
                     <form onSubmit={handleSubmit}>
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="username">
                                 Username
                             </label>
                             <input
@@ -84,7 +84,7 @@ const UserForm = ({ onUserCreated, onUserUpdated, editingUser, setEditingUser })
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="email">
                                 Email
                             </label>
                             <input
@@ -98,7 +98,7 @@ const UserForm = ({ onUserCreated, onUserUpdated, editingUser, setEditingUser })
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="password">
                                 Password
                             </label>
                             <input
@@ -112,7 +112,7 @@ const UserForm = ({ onUserCreated, onUserUpdated, editingUser, setEditingUser })
                             />
                         </div>
                         <div className="mb-6">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="role">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="role">
                                 Role
                             </label>
                             <select

@@ -46,14 +46,10 @@ export const AuthProvider = ({ children }) => {
     };
 
     // Check if user is authenticated
-    const isAuthenticated = () => {
-        return !!currentUser;
-    };
+    const isAuthenticated = !!currentUser;
 
     // Check if user is admin
-    const isAdmin = () => {
-        return currentUser?.role === 'admin';
-    };
+    const isAdmin = currentUser?.role === 'admin';
 
     const contextValue = {
         currentUser,

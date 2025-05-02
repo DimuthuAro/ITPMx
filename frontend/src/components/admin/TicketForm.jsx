@@ -7,6 +7,10 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
         title: '',
         description: '',
         userId: '',
+        name: '',
+        email: '',
+        phone: '',
+        inquiry_type: 'general',
         status: 'open',
         priority: 'medium'
     };
@@ -38,11 +42,29 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                 title: editingTicket.title || '',
                 description: editingTicket.description || '',
                 userId: editingTicket.user?._id || editingTicket.user || '',
+                name: editingTicket.name || '',
+                email: editingTicket.email || '',
+                phone: editingTicket.phone || '',
+                inquiry_type: editingTicket.inquiry_type || 'general',
                 status: editingTicket.status || 'open',
                 priority: editingTicket.priority || 'medium'
             });
         }
     }, [editingTicket]);
+
+    // Handle user selection and auto-fill user details
+    useEffect(() => {
+        if (formData.userId && users.length > 0) {
+            const selectedUser = users.find(user => user._id === formData.userId);
+            if (selectedUser) {
+                setFormData(prev => ({
+                    ...prev,
+                    name: selectedUser.name || selectedUser.username || prev.name,
+                    email: selectedUser.email || prev.email
+                }));
+            }
+        }
+    }, [formData.userId, users]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -64,14 +86,21 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
         e.preventDefault();
         setIsSubmitting(true);
         setError(null);
-
+        console.log('Form data:', formData); // Debugging line
         try {
+            // Prepare data for submission
+            const ticketData = {
+                ...formData,
+                user: formData.userId, // Map userId to user field expected by backend
+            };
+            delete ticketData.userId; // Remove the temporary userId field
+
             if (editingTicket) {
-                await updateTicket(editingTicket._id, formData);
-                onTicketUpdated({ ...editingTicket, ...formData });
+                await updateTicket(editingTicket._id, ticketData);
+                onTicketUpdated({ ...editingTicket, ...ticketData });
                 setEditingTicket(null);
             } else {
-                const newTicket = await createTicket(formData);
+                const newTicket = await createTicket(ticketData);
                 onTicketAdded(newTicket);
             }
             resetForm();
@@ -93,8 +122,8 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                     {editingTicket ? 'Edit Ticket' : 'Add New Ticket'}
                 </button>
             ) : (
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">
+                <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-white">
                         {editingTicket ? 'Edit Ticket' : 'Create New Ticket'}
                     </h3>
 
@@ -104,40 +133,10 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
-                                Title
-                            </label>
-                            <input
-                                id="title"
-                                name="title"
-                                type="text"
-                                value={formData.title}
-                                onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                required
-                            />
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-                                Description
-                            </label>
-                            <textarea
-                                id="description"
-                                name="description"
-                                value={formData.description}
-                                onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                rows="4"
-                                required
-                            />
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="userId">
-                                User
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="mb-4 col-span-2">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="userId">
+                                User *
                             </label>
                             <select
                                 id="userId"
@@ -157,7 +156,102 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="name">
+                                Name *
+                            </label>
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                value={formData.name}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="email">
+                                Email *
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="phone">
+                                Phone *
+                            </label>
+                            <input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="inquiry_type">
+                                Inquiry Type *
+                            </label>
+                            <select
+                                id="inquiry_type"
+                                name="inquiry_type"
+                                value={formData.inquiry_type}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required
+                            >
+                                <option value="technical">Technical Support</option>
+                                <option value="billing">Billing Question</option>
+                                <option value="general">General Inquiry</option>
+                                <option value="feature_request">Feature Request</option>
+                                <option value="bug_report">Bug Report</option>
+                            </select>
+                        </div>
+
+                        <div className="mb-4 col-span-2">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="title">
+                                Title *
+                            </label>
+                            <input
+                                id="title"
+                                name="title"
+                                type="text"
+                                value={formData.title}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required
+                            />
+                        </div>
+
+                        <div className="mb-4 col-span-2">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="description">
+                                Description *
+                            </label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                value={formData.description}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                rows="4"
+                                required
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="status">
                                 Status
                             </label>
                             <select
@@ -174,8 +268,8 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                             </select>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="priority">
+                        <div className="mb-4">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="priority">
                                 Priority
                             </label>
                             <select
@@ -192,7 +286,7 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                             </select>
                         </div>
 
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between col-span-2">
                             <button
                                 type="submit"
                                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

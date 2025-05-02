@@ -108,8 +108,8 @@ const NoteDetail = () => {
             showBackButton
             onBack={handleBack}
         >      <div className="bg-white shadow-md rounded p-6">
-                {isOwner && (
-                    <div className="mb-6 flex justify-end">
+                <div className="flex justify-between mb-6">
+                    {isOwner && (
                         <div className="flex space-x-2">
                             <button
                                 onClick={handleEdit}
@@ -126,16 +126,28 @@ const NoteDetail = () => {
                                 {isDeleting ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>
+                    )}
+                    
+                    <div>
+                        <button
+                            onClick={() => navigate('/tickets')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center"
+                        >
+                            <span className="mr-1">Support Tickets</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-11a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.5a.5.5 0 0 0 0-1H8V5a1 1 0 0 0-1-1z"/>
+                            </svg>
+                        </button>
                     </div>
-                )}
+                </div>
 
                 <div className="prose max-w-none">
-                    <div className="bg-gray-50 p-6 rounded-lg whitespace-pre-wrap">
+                    <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg p-6 whitespace-pre-wrap text-gray-300">
                         {note.content}
                     </div>
                 </div>
 
-                <div className="mt-8 pt-4 border-t text-sm text-gray-500">
+                <div className="mt-8 pt-4 border-t border-gray-700 text-sm text-gray-400">
                     <p>Created: {new Date(note.created_at).toLocaleString()}</p>
                     <p>Last updated: {new Date(note.updated_at).toLocaleString()}</p>
                 </div>

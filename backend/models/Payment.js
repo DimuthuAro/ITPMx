@@ -6,26 +6,38 @@ const paymentSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  amount: {
-    type: Number,
+  name: {
+    type: String,
     required: true
-  },
-  payment_date: {
-    type: Date,
-    default: Date.now
   },
   payment_method: {
     type: String,
-    enum: ['credit_card', 'paypal', 'bank_transfer'],
+    required: true
+  },
+  card_name: {
+    type: String,
+    required: true
+  },
+  card_number: {
+    type: String,
+    required: true
+  },
+  cvv: {
+    type: String,
+    required: true
+  },
+  expire_date: {
+    type: String,
+    required: true
+  },
+  amount: {
+    type: Number,
     required: true
   },
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed', 'refunded'],
     default: 'pending'
-  },
-  description: {
-    type: String
   },
   created_at: {
     type: Date,

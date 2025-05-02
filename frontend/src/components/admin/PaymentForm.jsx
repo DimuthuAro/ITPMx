@@ -5,10 +5,15 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
     const [users, setUsers] = useState([]);
     const initialFormState = {
         user: '',
+        name: '',
         amount: '',
         payment_method: 'credit_card',
         status: 'pending',
-        description: ''
+        description: '',
+        card_name: '',
+        card_number: '',
+        cvv: '',
+        expire_date: ''
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -36,10 +41,15 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
             setShowForm(true);
             setFormData({
                 user: editingPayment.user?._id || editingPayment.user || '',
+                name: editingPayment.name || '',
                 amount: editingPayment.amount || '',
                 payment_method: editingPayment.payment_method || 'credit_card',
                 status: editingPayment.status || 'pending',
-                description: editingPayment.description || ''
+                description: editingPayment.description || '',
+                card_name: editingPayment.card_name || '',
+                card_number: editingPayment.card_number || '',
+                cvv: editingPayment.cvv || '',
+                expire_date: editingPayment.expire_date || ''
             });
         }
     }, [editingPayment]);
@@ -96,8 +106,8 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                     {editingPayment ? 'Edit Payment' : 'Add New Payment'}
                 </button>
             ) : (
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">
+                <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-white">
                         {editingPayment ? 'Edit Payment' : 'Create New Payment'}
                     </h3>
 
@@ -109,7 +119,7 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
 
                     <form onSubmit={handleSubmit}>
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="user">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="user">
                                 User
                             </label>
                             <select
@@ -130,7 +140,22 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="amount">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="name">
+                                Payment Name
+                            </label>
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                value={formData.name}
+                                onChange={handleChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="amount">
                                 Amount
                             </label>
                             <input
@@ -146,7 +171,7 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="payment_method">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="payment_method">
                                 Payment Method
                             </label>
                             <select
@@ -163,8 +188,75 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                             </select>
                         </div>
 
+                        {formData.payment_method === 'credit_card' && (
+                            <>
+                                <div className="mb-4">
+                                    <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="card_name">
+                                        Name on Card
+                                    </label>
+                                    <input
+                                        id="card_name"
+                                        name="card_name"
+                                        type="text"
+                                        value={formData.card_name}
+                                        onChange={handleChange}
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                        required={formData.payment_method === 'credit_card'}
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="card_number">
+                                        Card Number
+                                    </label>
+                                    <input
+                                        id="card_number"
+                                        name="card_number"
+                                        type="text"
+                                        value={formData.card_number}
+                                        onChange={handleChange}
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                        required={formData.payment_method === 'credit_card'}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="mb-4">
+                                        <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="cvv">
+                                            CVV
+                                        </label>
+                                        <input
+                                            id="cvv"
+                                            name="cvv"
+                                            type="text"
+                                            value={formData.cvv}
+                                            onChange={handleChange}
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                            required={formData.payment_method === 'credit_card'}
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="expire_date">
+                                            Expiry Date
+                                        </label>
+                                        <input
+                                            id="expire_date"
+                                            name="expire_date"
+                                            type="text"
+                                            placeholder="MM/YY"
+                                            value={formData.expire_date}
+                                            onChange={handleChange}
+                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                            required={formData.payment_method === 'credit_card'}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="status">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="status">
                                 Status
                             </label>
                             <select
@@ -182,7 +274,7 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="description">
                                 Description
                             </label>
                             <textarea

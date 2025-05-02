@@ -91,8 +91,8 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
                     {editingNote ? 'Edit Note' : 'Add New Note'}
                 </button>
             ) : (
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">
+                <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-white">
                         {editingNote ? 'Edit Note' : 'Create New Note'}
                     </h3>
 
@@ -104,7 +104,7 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
 
                     <form onSubmit={handleSubmit}>
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="title">
                                 Title
                             </label>
                             <input
@@ -119,7 +119,7 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="content">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="content">
                                 Content
                             </label>
                             <textarea
@@ -134,7 +134,7 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="category">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="category">
                                 Category
                             </label>
                             <input
@@ -148,7 +148,7 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="user">
+                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="user">
                                 User
                             </label>
                             <select

@@ -57,9 +57,9 @@ const Register = () => {
   };
 
   return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-              <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">Register</h2>
+      <div className="min-h-screen flex items-center justify-center">
+          <div className="max-w-md w-full bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-700 p-8">
+              <h2 className="text-2xl font-bold text-center text-gray-200 mb-8">Register</h2>
 
               {error && (
                   <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
@@ -75,7 +75,7 @@ const Register = () => {
 
               <form onSubmit={handleSubmit}>
                   <div className="mb-4">
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+                      <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="username">
                           Username
                       </label>
                       <input
@@ -84,14 +84,14 @@ const Register = () => {
                           type="text"
                           value={formData.username}
                           onChange={handleChange}
-                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:shadow-outline bg-gray-700"
                           placeholder="johndoe"
                           required
                       />
                   </div>
 
                   <div className="mb-4">
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+                      <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="email">
                           Email
                       </label>
                       <input
@@ -100,14 +100,14 @@ const Register = () => {
                           type="email"
                           value={formData.email}
                           onChange={handleChange}
-                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:shadow-outline bg-gray-700"
                           placeholder="your@email.com"
                           required
                       />
                   </div>
 
                   <div className="mb-4">
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+                      <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="password">
                           Password
                       </label>
                       <input
@@ -116,14 +116,14 @@ const Register = () => {
                           type="password"
                           value={formData.password}
                           onChange={handleChange}
-                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:shadow-outline bg-gray-700"
                           placeholder="********"
                           required
                       />
                   </div>
 
                   <div className="mb-6">
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="confirmPassword">
+                      <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="confirmPassword">
                           Confirm Password
                       </label>
                       <input
@@ -132,7 +132,7 @@ const Register = () => {
                           type="password"
                           value={formData.confirmPassword}
                           onChange={handleChange}
-                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:shadow-outline bg-gray-700"
                           placeholder="********"
                           required
                       />

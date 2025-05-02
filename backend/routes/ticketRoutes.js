@@ -6,10 +6,12 @@ const router = express.Router();
 
 // Validation middleware for ticket
 const validateTicket = (req, res, next) => {
-  if (!req.body.title || !req.body.description) {
+  const { user, name, email, phone, title, description, inquiry_type, priority } = req.body;
+  
+  if (!user || !name || !email || !phone || !title || !description || !inquiry_type) {
     return res.status(400).json({ 
       success: false,
-      message: 'Missing required fields: title, description' 
+      message: 'Missing required fields for ticket' 
     });
   }
   next();
@@ -18,34 +20,7 @@ const validateTicket = (req, res, next) => {
 // GET all tickets
 router.get('/', async (req, res) => {
   try {
-    // No admin check - allow anyone to access all tickets
-
-    const tickets = await Ticket.find()
-      .populate('user', 'username email')
-      .sort({ 
-        priority: 1, // Sort by priority (urgent first)
-        created_at: -1 // Then by creation date (newest first)
-      });
-    
-    res.json(tickets);
-  } catch (error) {
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to fetch tickets',
-      error: error.message 
-    });
-  }
-});
-
-// GET user's tickets by user ID
-router.get('/:id?', async (req, res) => {
-  try {
-    const userId = req.params.id;
-    // If no userId provided, return all tickets
-    const tickets = userId ?
-      await Ticket.find({ _id: userId }).sort({ created_at: -1 }) :
-      await Ticket.find().sort({ created_at: -1 });
-    
+    const tickets = await Ticket.find().populate('user', 'username email');
     res.json({
       success: true,
       data: tickets
@@ -59,39 +34,83 @@ router.get('/:id?', async (req, res) => {
   }
 });
 
+// GET ticket by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id).populate('user', 'username email');
+    
+    if (!ticket) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Ticket not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: ticket
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch ticket',
+      error: error.message 
+    });
+  }
+});
+
+// GET tickets by user ID
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const tickets = await Ticket.find({ user: req.params.userId })
+      .sort({ priority: 1, created_at: -1 });
+    
+    res.json({
+      success: true,
+      data: tickets
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch user tickets',
+      error: error.message 
+    });
+  }
+});
+
 // POST create ticket
 router.post('/', validateTicket, async (req, res) => {
   try {
-    const { title, description, priority = 'medium', userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-
-    // Get user information for the ticket
-    const user = await User.findById(userId);
+    const { user, name, email, phone, title, description, inquiry_type, priority = 'medium' } = req.body;
     
-    if (!user) {
-      return res.status(404).json({ 
+    // Verify user exists
+    const userExists = await User.findById(user);
+    if (!userExists) {
+      return res.status(404).json({
         success: false,
-        message: 'User not found' 
+        message: 'User not found'
       });
     }
 
     const newTicket = new Ticket({
+      user,
+      name,
+      email,
+      phone,
       title,
       description,
-      user: userId,
-      status: 'open',
-      priority
+      inquiry_type,
+      priority,
+      status: 'open'
     });
     
     const savedTicket = await newTicket.save();
-
-    res.status(201).json(savedTicket);
+    
+    res.status(201).json({ 
+      success: true,
+      message: 'Ticket created successfully',
+      data: savedTicket
+    });
   } catch (error) {
     res.status(500).json({ 
       success: false,
@@ -101,62 +120,43 @@ router.post('/', validateTicket, async (req, res) => {
   }
 });
 
-// PATCH update ticket
+// PUT update ticket
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Ticket ID:', id); // Debugging line
-    console.log('Request body:', req.body); // Debugging line
-    const { status, priority, response } = req.body;
+    const { name, email, phone, title, description, status, inquiry_type, priority } = req.body;
     
-    // No admin check - allow anyone to update tickets
+    // Build update object
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
+    if (title) updateData.title = title;
+    if (description) updateData.description = description;
+    if (status) updateData.status = status;
+    if (inquiry_type) updateData.inquiry_type = inquiry_type;
+    if (priority) updateData.priority = priority;
     
-    // Check if ticket exists
-    const ticket = await Ticket.find({ _id: id });
-    
-    if (!ticket) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Ticket not found' 
-      });
-    }
-    console.log('Ticket found:', ticket); // Debugging line
-    // Build update object based on provided fields
-    const updateData = req.body;
-    
-    if (status !== undefined) {
-      updateData.status = status;
-      
-      // If status is 'resolved', set resolved_at timestamp
-      if (status === 'resolved') {
-        updateData.resolved_at = Date.now();
-      }
-    }
-    
-    if (priority !== undefined) {
-      updateData.priority = priority;
-    }
-    
-    if (response !== undefined) {
-      updateData.response = response;
-      updateData.responded_at = Date.now();
-    }
-    
-    // Update the updated_at timestamp
+    // Update updated_at timestamp
     updateData.updated_at = Date.now();
     
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No fields provided for update'
-      });
+    // If status is 'resolved', set resolved_at timestamp
+    if (status === 'resolved') {
+      updateData.resolved_at = Date.now();
     }
     
     const updatedTicket = await Ticket.findByIdAndUpdate(
       id,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     );
+
+    if (!updatedTicket) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Ticket not found' 
+      });
+    }
 
     res.json({ 
       success: true,
@@ -176,20 +176,15 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
+    const deletedTicket = await Ticket.findByIdAndDelete(id);
     
-    // First check if ticket exists
-    const ticket = await Ticket.findById(id);
-    
-    if (!ticket) {
+    if (!deletedTicket) {
       return res.status(404).json({ 
         success: false,
         message: 'Ticket not found' 
       });
     }
-    
-    // No ownership check - allow anyone to delete
-
-    await Ticket.findByIdAndDelete(id);
 
     res.json({ 
       success: true,

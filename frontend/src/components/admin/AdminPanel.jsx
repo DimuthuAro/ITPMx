@@ -10,10 +10,27 @@ import UserForm from '../admin/UserForm';
 import TicketForm from '../admin/TicketForm';
 import PaymentForm from '../admin/PaymentForm';
 import NoteForm from '../admin/NoteForm';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const currentUser = localStorage.getItem('currentUser');
+  const { currentUser, isAdmin } = useAuth();
+  
+  // Log authentication status for debugging
+  useEffect(() => {
+    console.log("AdminPanel - Current user:", currentUser);
+    console.log("AdminPanel - Is admin:", isAdmin);
+    
+    if (!currentUser) {
+      console.error("User not logged in, redirecting to login");
+      navigate('/login');
+      return;
+    }
+    
+    if (!isAdmin) {
+      console.error("User is not an admin, should be redirected by ProtectedRoute");
+    }
+  }, [currentUser, isAdmin, navigate]);
 
   // State for different data types
   const [users, setUsers] = useState([]);
@@ -23,12 +40,6 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Check if user is admin
-  useEffect(() => {
-
-    
-  }, [currentUser]);
 
   // State for editing items
   const [editingUser, setEditingUser] = useState(null);
@@ -42,17 +53,24 @@ const AdminPanel = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const userData = await getUsers(); const ticketData = await getTickets();
+        const userData = await getUsers(); 
+        const ticketData = await getTickets();
         const paymentData = await getPayments();
         const noteData = await getNotes();
 
-        setUsers(userData || []);
-        setTickets(ticketData || []);
-        setPayments(paymentData || []);
-        setNotes(noteData || []);
+        // Ensure all data is initialized as arrays even if API returns null/undefined
+        setUsers(Array.isArray(userData) ? userData : []);
+        setTickets(Array.isArray(ticketData) ? ticketData : []);
+        setPayments(Array.isArray(paymentData) ? paymentData : []);
+        setNotes(Array.isArray(noteData) ? noteData : []);
 
         console.log('Data fetched successfully');
       } catch (err) {
+        // Set empty arrays when error occurs
+        setUsers([]);
+        setTickets([]);
+        setPayments([]);
+        setNotes([]);
         setError(err.message || 'An error occurred while fetching data');
         console.error('Error fetching data:', err);
       } finally {
@@ -178,33 +196,158 @@ const AdminPanel = () => {
 
   // Render dashboard
   const renderDashboard = () => {
+    // Get ticket statistics
+    const openTickets = tickets.filter(ticket => ticket.status === 'open').length;
+    const inProgressTickets = tickets.filter(ticket => ticket.status === 'in_progress').length;
+    const resolvedTickets = tickets.filter(ticket => ticket.status === 'resolved').length;
+    
+    // Get payment statistics
+    const completedPayments = payments.filter(payment => payment.status === 'completed').length;
+    const pendingPayments = payments.filter(payment => payment.status === 'pending').length;
+    const totalPaymentAmount = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Users</h3>
-          <div className="text-3xl font-bold text-blue-600">{users.length}</div>
-          <p className="text-gray-600">Total registered users</p>
+      <div className="space-y-8">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow p-6 transition-all duration-300 hover:shadow-lg hover:border-blue-500">
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-1 text-gray-200">Users</h3>
+                <div className="text-3xl font-bold text-blue-400">{users.length}</div>
+                <p className="text-gray-400 text-sm mt-1">Total registered accounts</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow p-6 transition-all duration-300 hover:shadow-lg hover:border-green-500">
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-1 text-gray-200">Tickets</h3>
+                <div className="text-3xl font-bold text-green-400">{tickets.length}</div>
+                <p className="text-gray-400 text-sm mt-1">
+                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 mr-1">{openTickets} open</span>
+                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{inProgressTickets} in progress</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow p-6 transition-all duration-300 hover:shadow-lg hover:border-purple-500">
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-1 text-gray-200">Payments</h3>
+                <div className="text-3xl font-bold text-purple-400">${totalPaymentAmount.toFixed(2)}</div>
+                <p className="text-gray-400 text-sm mt-1">
+                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 mr-1">{payments.length} total</span>
+                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">{pendingPayments} pending</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow p-6 transition-all duration-300 hover:shadow-lg hover:border-orange-500">
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-1 text-gray-200">Notes</h3>
+                <div className="text-3xl font-bold text-orange-400">{notes.length}</div>
+                <p className="text-gray-400 text-sm mt-1">User documentation entries</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Tickets</h3>
-          <div className="text-3xl font-bold text-green-600">{tickets.length}</div>
-          <p className="text-gray-600">Total tickets</p>
-        </div>
+        {/* Activity Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Recent Tickets */}
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow p-6">
+            <h3 className="text-xl font-bold mb-4 text-gray-200 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+              Recent Tickets
+            </h3>
+            <div className="space-y-3">
+              {tickets.slice(0, 5).map(ticket => (
+                <div key={ticket._id} className="border-l-4 border-green-500 pl-4 py-2">
+                  <p className="font-medium text-gray-300">{ticket.title}</p>
+                  <div className="flex items-center mt-1">
+                    <span className={`px-2 py-1 rounded-full text-xs mr-2 ${
+                      ticket.status === 'open' ? 'bg-green-100 text-green-800' :
+                      ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' : 
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {ticket.status}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(ticket.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {tickets.length === 0 && (
+                <p className="text-gray-400 text-center py-4">No tickets found</p>
+              )}
+            </div>
+          </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Payments</h3>
-          <div className="text-3xl font-bold text-purple-600">{payments.length}</div>
-          <p className="text-gray-600">Total payments</p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Notes</h3>
-          <div className="text-3xl font-bold text-orange-600">{notes.length}</div>
-          <p className="text-gray-600">Total notes</p>
+          {/* Recent Payments */}
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow p-6">
+            <h3 className="text-xl font-bold mb-4 text-gray-200 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Recent Payments
+            </h3>
+            <div className="space-y-3">
+              {payments.slice(0, 5).map(payment => (
+                <div key={payment._id} className="border-l-4 border-purple-500 pl-4 py-2">
+                  <div className="flex justify-between">
+                    <p className="font-medium text-gray-300">${payment.amount?.toFixed(2)}</p>
+                    <p className="text-sm text-gray-400">{payment.payment_method}</p>
+                  </div>
+                  <div className="flex items-center mt-1">
+                    <span className={`px-2 py-1 rounded-full text-xs mr-2 ${
+                      payment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {payment.status}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(payment.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {payments.length === 0 && (
+                <p className="text-gray-400 text-center py-4">No payments found</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    )
+    );
   };
 
   // Render user list
@@ -220,22 +363,22 @@ const AdminPanel = () => {
           setEditingUser={setEditingUser}
         />
 
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>
             <tr>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Username
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Email
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Role
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Created
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -243,20 +386,20 @@ const AdminPanel = () => {
           <tbody>
             {users && users.length === 0 ? (
               <tr>
-                <td colSpan="5" className="py-4 px-6 border-b border-gray-200 text-center text-gray-500">
+                <td colSpan="5" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
                   No users found
                 </td>
               </tr>
             ) : (
               users.map(user => (
                 <tr key={user._id}>
-                  <td className="py-2 px-4 border-b border-gray-200">{user.username}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">{user.email}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">{user.role || 'user'}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">{user.username}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">{user.email}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">{user.role || 'user'}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <button
                       onClick={() => handleEditUser(user)}
                       className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -292,25 +435,31 @@ const AdminPanel = () => {
           setEditingTicket={setEditingTicket}
         />
 
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>
             <tr>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Title
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Priority
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                User
-              </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Date
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -318,15 +467,22 @@ const AdminPanel = () => {
           <tbody>
             {tickets && tickets.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-4 px-6 border-b border-gray-200 text-center text-gray-500">
+                <td colSpan="8" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
                   No tickets found
                 </td>
               </tr>
             ) : (
               tickets.map(ticket => (
                 <tr key={ticket._id}>
-                  <td className="py-2 px-4 border-b border-gray-200">{ticket.title}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">{ticket.title}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">{ticket.name}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">{ticket.email}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
+                    <span className={`px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800`}>
+                      {ticket.inquiry_type?.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <span className={`px-2 py-1 rounded-full text-xs ${ticket.status === 'open' ? 'bg-green-100 text-green-800' :
                       ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                         ticket.status === 'resolved' ? 'bg-gray-100 text-gray-800' :
@@ -335,7 +491,7 @@ const AdminPanel = () => {
                       {ticket.status}
                     </span>
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <span className={`px-2 py-1 rounded-full text-xs ${ticket.priority === 'low' ? 'bg-gray-100 text-gray-800' :
                       ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                         ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
@@ -344,13 +500,10 @@ const AdminPanel = () => {
                       {ticket.priority}
                     </span>
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
-                    {ticket.user?.username || 'Unknown'}
-                  </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {new Date(ticket.created_at).toLocaleDateString()}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <button
                       onClick={() => handleEditTicket(ticket)}
                       className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -386,25 +539,25 @@ const AdminPanel = () => {
           setEditingPayment={setEditingPayment}
         />
 
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>
             <tr>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 User
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Amount
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Payment Method
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Date
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -412,23 +565,23 @@ const AdminPanel = () => {
           <tbody>
             {payments && payments.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-4 px-6 border-b border-gray-200 text-center text-gray-500">
+                <td colSpan="6" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
                   No payments found
                 </td>
               </tr>
             ) : (
               payments.map(payment => (
                 <tr key={payment._id}>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {payment.user?.username || 'Unknown'}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     ${payment.amount?.toFixed(2)}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {payment.payment_method}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <span className={`px-2 py-1 rounded-full text-xs ${payment.status === 'completed' ? 'bg-green-100 text-green-800' :
                       payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         payment.status === 'failed' ? 'bg-red-100 text-red-800' :
@@ -437,10 +590,10 @@ const AdminPanel = () => {
                       {payment.status}
                     </span>
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {new Date(payment.created_at).toLocaleDateString()}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <button
                       onClick={() => handleEditPayment(payment)}
                       className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -476,25 +629,25 @@ const AdminPanel = () => {
           setEditingNote={setEditingNote}
         />
 
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>
             <tr>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Title
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Content
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Category
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 User
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Date
               </th>
-              <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -502,27 +655,27 @@ const AdminPanel = () => {
           <tbody>
             {notes && notes.length === 0 ? (
               <tr>
-                <td colSpan="6" className="py-4 px-6 border-b border-gray-200 text-center text-gray-500">
+                <td colSpan="6" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
                   No notes found
                 </td>
               </tr>
             ) : (
               notes.map(note => (
                 <tr key={note._id}>
-                  <td className="py-2 px-4 border-b border-gray-200">{note.title}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">{note.title}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {note.content?.length > 50
                       ? `${note.content.substring(0, 50)}...`
                       : note.content}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">{note.category || 'Uncategorized'}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">{note.category || 'Uncategorized'}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {note.user?.username || 'Unknown'}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     {new Date(note.created_at).toLocaleDateString()}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-200">
+                  <td className="py-2 px-4 border-b border-gray-600">
                     <button
                       onClick={() => handleEditNote(note)}
                       className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -568,41 +721,41 @@ const AdminPanel = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Admin Panel</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center text-gray-200">Admin Panel</h1>
 
       <div className="flex flex-col md:flex-row gap-6 mb-8">
         <div className="w-full md:w-1/5">
-          <div className="bg-white shadow rounded-md overflow-hidden">
-            <div className="p-4 bg-gray-800 text-white">
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-md overflow-hidden">
+            <div className="p-4 bg-gray-900 text-white">
               <h2 className="text-xl font-bold">Navigation</h2>
             </div>
             <div className="py-2">
               <button
-                className={`w-full text-left py-2 px-4 hover:bg-gray-100 ${activeTab === 'dashboard' ? 'bg-blue-100 font-bold' : ''}`}
+                className={`w-full text-left py-2 px-4 hover:bg-gray-700 text-gray-200 ${activeTab === 'dashboard' ? 'bg-blue-900/80 font-bold text-blue-200' : ''}`}
                 onClick={() => handleTabChange('dashboard')}
               >
                 Dashboard
               </button>
               <button
-                className={`w-full text-left py-2 px-4 hover:bg-gray-100 ${activeTab === 'users' ? 'bg-blue-100 font-bold' : ''}`}
+                className={`w-full text-left py-2 px-4 hover:bg-gray-700 text-gray-200 ${activeTab === 'users' ? 'bg-blue-900/80 font-bold text-blue-200' : ''}`}
                 onClick={() => handleTabChange('users')}
               >
                 Users
               </button>
               <button
-                className={`w-full text-left py-2 px-4 hover:bg-gray-100 ${activeTab === 'tickets' ? 'bg-blue-100 font-bold' : ''}`}
+                className={`w-full text-left py-2 px-4 hover:bg-gray-700 text-gray-200 ${activeTab === 'tickets' ? 'bg-blue-900/80 font-bold text-blue-200' : ''}`}
                 onClick={() => handleTabChange('tickets')}
               >
                 Tickets
               </button>
               <button
-                className={`w-full text-left py-2 px-4 hover:bg-gray-100 ${activeTab === 'payments' ? 'bg-blue-100 font-bold' : ''}`}
+                className={`w-full text-left py-2 px-4 hover:bg-gray-700 text-gray-200 ${activeTab === 'payments' ? 'bg-blue-900/80 font-bold text-blue-200' : ''}`}
                 onClick={() => handleTabChange('payments')}
               >
                 Payments
               </button>
               <button
-                className={`w-full text-left py-2 px-4 hover:bg-gray-100 ${activeTab === 'notes' ? 'bg-blue-100 font-bold' : ''}`}
+                className={`w-full text-left py-2 px-4 hover:bg-gray-700 text-gray-200 ${activeTab === 'notes' ? 'bg-blue-900/80 font-bold text-blue-200' : ''}`}
                 onClick={() => handleTabChange('notes')}
               >
                 Notes
@@ -612,7 +765,7 @@ const AdminPanel = () => {
         </div>
 
         <div className="w-full md:w-4/5">
-          <div className="bg-white shadow rounded-md p-6">
+          <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-md p-6 text-gray-200">
             {activeTab === 'dashboard' && renderDashboard()}
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'tickets' && renderTickets()}

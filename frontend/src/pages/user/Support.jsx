@@ -7,11 +7,14 @@ import Chatbot from '../../components/user/Chatbot';
 const Support = () => {
     const { currentUser } = useAuth();
     const [formData, setFormData] = useState({
+        user: currentUser?.id || '', // Match backend model
         name: currentUser?.username || '',
         email: currentUser?.email || '',
-        subject: '',
-        inquiry_type: 'general_inquiry',
-        message: '',
+        phone: '',
+        title: '',
+        description: '',
+        inquiry_type: 'general', // Match backend enum
+        priority: 'low',
     });
     // Gemini API key - Replace with your actual key when deploying
     const geminiApiKey = "AIzaSyCw7OseY5nPkeM2Oxqao1w9U6IPe3odklw";
@@ -34,22 +37,22 @@ const Support = () => {
         setSuccessMessage('');
 
         try {
-            // In a real app, we would submit this to the backend
-            // await submitSupportTicket(formData);
-            
-            // For now, we'll simulate a successful submission
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
+            // Submit the form data to the backend
+            const response = await createTicket(formData); // Assuming createTicket is imported
             setSuccessMessage('Your support ticket has been submitted successfully. Our team will contact you shortly.');
-            
+
             // Reset form
             setFormData({
+                user: currentUser?.id || '',
                 name: currentUser?.username || '',
                 email: currentUser?.email || '',
-                subject: '',
-                inquiry_type: 'general_inquiry',
-                message: '',
+                phone: '',
+                title: '',
+                description: '',
+                inquiry_type: 'general',
+                priority: 'low',
             });
+            console.log('Support ticket submitted:', response);
         } catch (error) {
             console.error('Error submitting support ticket:', error);
             setErrorMessage('Failed to submit support ticket. Please try again later.');
@@ -58,58 +61,10 @@ const Support = () => {
         }
     };
 
-    const supportCategories = [
-        {
-            title: "Technical Help",
-            icon: (
-                <svg className="w-12 h-12 text-blue-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                </svg>
-            ),
-            description: "Get help with technical issues, bugs, or application errors."
-        },
-        {
-            title: "Account & Billing",
-            icon: (
-                <svg className="w-12 h-12 text-blue-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                </svg>
-            ),
-            description: "Questions about your account, subscription, or payment issues."
-        },
-        {
-            title: "Feature Requests",
-            icon: (
-                <svg className="w-12 h-12 text-blue-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                </svg>
-            ),
-            description: "Suggest new features or improvements to our service."
-        }
-    ];
-
     return (
         <UserLayout title="Support Center" subtitle="Get help and support for all your needs">
             <div className="space-y-8">
-                {/* Support Options */}
-                <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700/50 shadow-lg">
-                    <h2 className="text-xl font-semibold text-white mb-6">How can we help you today?</h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {supportCategories.map((category, index) => (
-                            <div 
-                                key={index} 
-                                className="bg-gray-900/70 rounded-lg p-6 border border-gray-700 hover:border-blue-500/50 hover:shadow-md hover:shadow-blue-500/20 transition-all duration-300 text-center"
-                            >
-                                <div className="flex justify-center">
-                                    {category.icon}
-                                </div>
-                                <h3 className="text-lg font-semibold text-white mb-2">{category.title}</h3>
-                                <p className="text-gray-300 mb-4">{category.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+
                 
                 {/* Quick Links */}
                 <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700/50 shadow-lg">
@@ -142,33 +97,22 @@ const Support = () => {
                             </div>
                         </Link>
                         
-                        <a 
-                            href="mailto:support@example.com" 
-                            className="flex items-center p-4 bg-gray-900/70 rounded-lg hover:bg-gray-900 transition-colors duration-200 border border-gray-700"
-                        >
-                            <svg className="w-6 h-6 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                            </svg>
-                            <div>
-                                <h3 className="font-medium text-white">Email Support</h3>
-                                <p className="text-sm text-gray-400">Send us an email at support@example.com</p>
-                            </div>
-                        </a>
-                        
-                        <div 
-                            className="flex items-center p-4 bg-gray-900/70 rounded-lg border border-gray-700"
-                        >
-                            <svg className="w-6 h-6 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <div>
-                                <h3 className="font-medium text-white">Support Hours</h3>
-                                <p className="text-sm text-gray-400">Monday-Friday: 9am-6pm ET</p>
+                    </div>
+                    <div className=" flex items-center justify-center flex-row p-4" > 
+                            <div 
+                                className="flex items-center p-4 bg-gray-900/70 rounded-lg border border-gray-700"
+                            >
+                                <svg className="w-6 h-6 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <h3 className="font-medium text-white">Support Hours</h3>
+                                    <p className="text-sm text-gray-400">Monday-Friday: 9am-6pm ET</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
                 </div>
-                
+
                 {/* Contact Form */}
                 <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700/50 shadow-lg">
                     <h2 className="text-xl font-semibold text-white mb-6">Submit a Support Request</h2>
@@ -197,6 +141,20 @@ const Support = () => {
                     
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                            <div>
+                                <label htmlFor="user" className="block text-gray-300 font-medium mb-2">User ID</label>
+                                <input
+                                    type="text"
+                                    id="user"
+                                    name="user"
+                                    value={formData.user}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+
                             <div>
                                 <label htmlFor="name" className="block text-gray-300 font-medium mb-2">Name</label>
                                 <input
@@ -224,17 +182,45 @@ const Support = () => {
                             </div>
                         </div>
                         
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="phone" className="block text-gray-300 font-medium mb-2">Mobile</label>
+                                <input
+                                    type="text"
+                                    id="phone"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label htmlFor="title" className="block text-gray-300 font-medium mb-2">Title</label>
+                                <input
+                                    type="text"
+                                    id="title"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                        
                         <div>
-                            <label htmlFor="subject" className="block text-gray-300 font-medium mb-2">Subject</label>
-                            <input
-                                type="text"
-                                id="subject"
-                                name="subject"
-                                value={formData.subject}
+                            <label htmlFor="description" className="block text-gray-300 font-medium mb-2">Description</label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                value={formData.description}
                                 onChange={handleChange}
                                 required
+                                rows="5"
                                 className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
+                            ></textarea>
                         </div>
                         
                         <div>
@@ -247,25 +233,29 @@ const Support = () => {
                                 required
                                 className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
-                                <option value="general_inquiry">General Inquiry</option>
-                                <option value="technical_issue">Technical Issue</option>
-                                <option value="billing_question">Billing Question</option>
+                                <option value="general">General Inquiry</option>
+                                <option value="technical">Technical Issue</option>
+                                <option value="billing">Billing Question</option>
                                 <option value="feature_request">Feature Request</option>
-                                <option value="account_issue">Account Issue</option>
+                                <option value="bug_report">Account Issue</option>
                             </select>
                         </div>
                         
                         <div>
-                            <label htmlFor="message" className="block text-gray-300 font-medium mb-2">Message</label>
-                            <textarea
-                                id="message"
-                                name="message"
-                                value={formData.message}
+                            <label htmlFor="priority" className="block text-gray-300 font-medium mb-2">Priority</label>
+                            <select
+                                id="priority"
+                                name="priority"
+                                value={formData.priority}
                                 onChange={handleChange}
                                 required
-                                rows="5"
                                 className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            ></textarea>
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
                         </div>
                         
                         <div className="flex justify-end">

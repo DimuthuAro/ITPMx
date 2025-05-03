@@ -25,7 +25,7 @@ const Navbar = () => {
                                 </li>
                                 
                                 <li>
-                                    <Link to="/tickets" className="text-gray-300 hover:text-blue-400 transition duration-200">Support Tickets</Link>
+                                    <Link to="/support" className="text-gray-300 hover:text-blue-400 transition duration-200">Support Tickets</Link>
                                 </li>
                                 
                                 <li>

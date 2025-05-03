@@ -21,10 +21,7 @@ const validateTicket = (req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     const tickets = await Ticket.find().populate('user', 'username email');
-    res.json({
-      success: true,
-      data: tickets
-    });
+    res.json(tickets);
   } catch (error) {
     res.status(500).json({ 
       success: false,

@@ -114,14 +114,6 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
 
     return (
         <div className="mb-6">
-            {!showForm ? (
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                >
-                    {editingTicket ? 'Edit Ticket' : 'Add New Ticket'}
-                </button>
-            ) : (
                 <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-lg p-6">
                     <h3 className="text-lg font-semibold mb-4 text-white">
                         {editingTicket ? 'Edit Ticket' : 'Create New Ticket'}
@@ -307,7 +299,6 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                         </div>
                     </form>
                 </div>
-            )}
         </div>
     );
 };

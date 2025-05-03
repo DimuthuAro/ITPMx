@@ -81,6 +81,10 @@ const AdminPanel = () => {
     fetchData();
   }, [activeTab]);
 
+  const handleViewTicket = (ticketId) => {
+    navigate(`/tickets/${ticketId}`);
+  }
+
   // Handle tab change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -428,12 +432,7 @@ const AdminPanel = () => {
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Ticket Management</h2>
 
-        <TicketForm
-          onTicketAdded={handleTicketCreated}
-          onTicketUpdated={handleTicketUpdated}
-          editingTicket={editingTicket}
-          setEditingTicket={setEditingTicket}
-        />
+
 
         <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>
@@ -515,6 +514,12 @@ const AdminPanel = () => {
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
                     >
                       Delete
+                    </button>
+                    <button
+                      onClick={() => handleViewTicket(ticket._id)}
+                      className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
+                    >
+                      View
                     </button>
                   </td>
                 </tr>

@@ -108,7 +108,7 @@ const TicketDetail = () => {
         <UserLayout 
             title="Ticket Details" 
             showBackButton={true} 
-            onBack={() => navigate('/tickets')}
+            onBack={() => navigate('/admin')}
             subtitle="View and manage your support request"
         >
             {loading ? (
@@ -229,31 +229,7 @@ const TicketDetail = () => {
                         </div>
                     </div>
                     
-                    {/* Comments Section */}
-                    <div className="bg-gray-800/40 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-700/50">
-                        <div className="p-6">
-                            <h3 className="text-lg font-medium text-white mb-4">Add a Comment</h3>
-                            <textarea
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                placeholder="Type your comment here..."
-                                rows="3"
-                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
-                            ></textarea>
-                            <div className="mt-4 flex justify-end">
-                                <button 
-                                    onClick={handleAddComment}
-                                    disabled={!comment.trim() || isSubmitting}
-                                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                    </svg>
-                                    {isSubmitting ? 'Submitting...' : 'Add Comment'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    
                 </div>
             ) : (
                 <div className="text-center py-12 bg-gray-800/30 rounded-xl border border-gray-700/50 backdrop-blur-sm">

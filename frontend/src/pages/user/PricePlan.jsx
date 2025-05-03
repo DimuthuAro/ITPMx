@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 const PricePlan = () => {
     const navigate = useNavigate();
     
-    const handleProceedToPayment = (planType) => {
-        navigate('/payments/create', { state: { planType } });
+    const handleProceedToPayment = (planType, price) => {
+        navigate('/payment/create', { state: { planType, price } });
     };
 
     return (
@@ -48,7 +48,7 @@ const PricePlan = () => {
                         </ul>
                         <button 
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                            onClick={() => handleProceedToPayment('basic')}
+                            onClick={() => handleProceedToPayment('basic', 5)}
                         >
                             Select Basic Plan
                         </button>
@@ -94,7 +94,7 @@ const PricePlan = () => {
                         </ul>
                         <button 
                             className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-md transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                            onClick={() => handleProceedToPayment('standard')}
+                            onClick={() => handleProceedToPayment('standard', 10)}
                         >
                             Select Standard Plan
                         </button>
@@ -139,7 +139,7 @@ const PricePlan = () => {
                         </ul>
                         <button 
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50" 
-                            onClick={() => handleProceedToPayment('premium')}
+                            onClick={() => handleProceedToPayment('premium', 15)}
                         >
                             Select Premium Plan
                         </button>

@@ -1,25 +1,79 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createPayment } from '../../services/api';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { getPaymentById, updatePayment, createPayment } from '../../services/api';
 import UserLayout from '../../components/user/UserLayout';
 import { useAuth } from '../../context/AuthContext';
+// Import icons from React Icons library
+import { FaCreditCard, FaUser, FaLock, FaCalendarAlt, FaShieldAlt } from 'react-icons/fa';
+import { BsCreditCard2Front, BsCreditCard2Back, BsCheckCircleFill } from 'react-icons/bs';
+import { RiVisaLine, RiMastercardFill, RiSecurePaymentLine } from 'react-icons/ri';
+import { AiFillSafetyCertificate } from 'react-icons/ai';
 
 const PaymentForm = () => {
+    const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { currentUser } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(id ? true : false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     
+    // Get plan details from location state if coming from pricing page
+    const planType = location.state?.planType || '';
+    const planPrice = location.state?.price || '';
+    
     const [formData, setFormData] = useState({
-        name: currentUser?.name || '',
-        payment_method: 'credit_card',
+        name: '',
+        payment_method: 'visa',
         card_name: '',
         card_number: '',
         cvv: '',
         expire_date: '',
-        amount: ''
+        amount: planPrice ? planPrice.toString() : '',
+        plan_type: planType || '',
+        status: 'pending'
     });
+
+    // Fetch payment data when component loads (only if editing an existing payment)
+    useEffect(() => {
+        const fetchPayment = async () => {
+            if (!id) {
+                setFetchLoading(false);
+                return;
+            }
+
+            try {
+                const response = await getPaymentById(id);
+                const payment = response.data || response;
+                
+                setFormData({
+                    name: payment.name || '',
+                    payment_method: payment.payment_method || 'visa',
+                    card_name: payment.card_name || '',
+                    card_number: payment.card_number || '',
+                    cvv: payment.cvv || '',
+                    expire_date: payment.expire_date || '',
+                    amount: payment.amount ? payment.amount.toString() : '',
+                    plan_type: payment.plan_type || '',
+                    status: payment.status || 'pending'
+                });
+            } catch (err) {
+                console.error('Error fetching payment:', err);
+                setError('Failed to load payment details. Please try again.');
+            } finally {
+                setFetchLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchPayment();
+        }
+    }, [id]);
+    
+    // Form title and subtitle based on whether creating or editing
+    const getFormTitle = () => id ? "Edit Payment Details" : "Complete Your Payment";
+    const getFormSubtitle = () => id ? "Update your payment information securely" : "Enter your payment details securely";
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -114,24 +168,21 @@ const PaymentForm = () => {
             // Prepare payment data
             const paymentData = {
                 ...formData,
-                user: currentUser.id,
                 card_number: formData.card_number.replace(/\s/g, ''), // Remove spaces
-                amount: parseFloat(formData.amount)
+                amount: parseFloat(formData.amount),
+                user: currentUser.id // Add user ID for new payments
             };
             
-            const response = await createPayment(paymentData);
-            setSuccessMessage('Payment submitted successfully!');
-            
-            // Reset form
-            setFormData({
-                name: currentUser?.name || '',
-                payment_method: 'credit_card',
-                card_name: '',
-                card_number: '',
-                cvv: '',
-                expire_date: '',
-                amount: ''
-            });
+            let response;
+            if (id) {
+                // Update existing payment
+                response = await updatePayment(id, paymentData);
+                setSuccessMessage('Payment updated successfully!');
+            } else {
+                // Create new payment
+                response = await createPayment(paymentData);
+                setSuccessMessage('Payment processed successfully!');
+            }
             
             // Redirect to payment list after a delay
             setTimeout(() => {
@@ -139,42 +190,67 @@ const PaymentForm = () => {
             }, 2000);
             
         } catch (err) {
-            console.error('Error creating payment:', err);
-            setError('Failed to process payment. Please try again.');
+            console.error('Error processing payment:', err);
+            setError(id ? 'Failed to update payment. Please try again.' : 'Failed to process payment. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const handleCancel = () => {
-        navigate('/payments');
+        navigate(id ? '/payments' : '/pricing');
     };
+
+    if (fetchLoading) {
+        return (
+            <UserLayout title="Loading Payment" subtitle="Please wait...">
+                <div className="text-center py-12">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    <p className="mt-4 text-lg text-gray-300">Loading payment details...</p>
+                </div>
+            </UserLayout>
+        );
+    }
 
     return (
         <UserLayout 
-            title="Make a Payment" 
-            subtitle="Enter your payment information securely"
+            title={getFormTitle()} 
+            subtitle={getFormSubtitle()}
             showBackButton={true}
-            onBack={() => navigate('/payments')}
+            onBack={() => navigate(id ? '/payments' : '/pricing')}
         >
             {successMessage && (
-                <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded flex items-center">
+                    <BsCheckCircleFill className="mr-2" />
                     <p>{successMessage}</p>
                 </div>
             )}
             
             {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded flex items-center">
+                    <FaLock className="mr-2" />
                     <p>{error}</p>
                 </div>
             )}
             
             <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
+                {/* Show plan details if coming from pricing page */}
+                {planType && (
+                    <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                            {planType.charAt(0).toUpperCase() + planType.slice(1)} Plan
+                        </h3>
+                        <p className="text-blue-600 font-bold text-xl">${planPrice}/month</p>
+                    </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Left Column */}
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-gray-700 text-sm font-medium mb-1">Your Name</label>
+                            <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                <FaUser className="mr-2" /> Your Name
+                            </label>
                             <input
                                 type="text"
                                 name="name"
@@ -186,21 +262,41 @@ const PaymentForm = () => {
                         </div>
                         
                         <div>
-                            <label className="block text-gray-700 text-sm font-medium mb-1">Payment Method</label>
-                            <select
-                                name="payment_method"
-                                value={formData.payment_method}
-                                onChange={handleChange}
-                                required
-                                className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="credit_card">Credit Card</option>
-                                <option value="debit_card">Debit Card</option>
-                            </select>
+                            <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                <RiSecurePaymentLine className="mr-2" /> Card Type
+                            </label>
+                            <div className="flex space-x-4">
+                                <label className={`flex items-center p-3 border rounded-md cursor-pointer ${formData.payment_method === 'visa' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}>
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="visa"
+                                        checked={formData.payment_method === 'visa'}
+                                        onChange={handleChange}
+                                        className="hidden"
+                                    />
+                                    <RiVisaLine className="text-blue-600 text-3xl mr-2" />
+                                    <span>Visa</span>
+                                </label>
+                                <label className={`flex items-center p-3 border rounded-md cursor-pointer ${formData.payment_method === 'mastercard' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}>
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="mastercard"
+                                        checked={formData.payment_method === 'mastercard'}
+                                        onChange={handleChange}
+                                        className="hidden"
+                                    />
+                                    <RiMastercardFill className="text-red-600 text-3xl mr-2" />
+                                    <span>Mastercard</span>
+                                </label>
+                            </div>
                         </div>
                         
                         <div>
-                            <label className="block text-gray-700 text-sm font-medium mb-1">Name on Card</label>
+                            <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                <BsCreditCard2Front className="mr-2" /> Name on Card
+                            </label>
                             <input
                                 type="text"
                                 name="card_name"
@@ -216,7 +312,9 @@ const PaymentForm = () => {
                     {/* Right Column */}
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-gray-700 text-sm font-medium mb-1">Card Number</label>
+                            <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                <FaCreditCard className="mr-2" /> Card Number
+                            </label>
                             <input
                                 type="text"
                                 name="card_number"
@@ -231,7 +329,9 @@ const PaymentForm = () => {
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-gray-700 text-sm font-medium mb-1">Expiry Date</label>
+                                <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                    <FaCalendarAlt className="mr-2" /> Expiry Date
+                                </label>
                                 <input
                                     type="text"
                                     name="expire_date"
@@ -244,7 +344,9 @@ const PaymentForm = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-gray-700 text-sm font-medium mb-1">CVV</label>
+                                <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                    <BsCreditCard2Back className="mr-2" /> CVV
+                                </label>
                                 <input
                                     type="password"
                                     name="cvv"
@@ -259,7 +361,9 @@ const PaymentForm = () => {
                         </div>
                         
                         <div>
-                            <label className="block text-gray-700 text-sm font-medium mb-1">Amount ($)</label>
+                            <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                <RiVisaLine className="mr-2" /> Amount ($)
+                            </label>
                             <input
                                 type="number"
                                 name="amount"
@@ -272,17 +376,32 @@ const PaymentForm = () => {
                                 className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
+
+                        {id && (
+                            <div>
+                                <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                                    <FaShieldAlt className="mr-2" /> Payment Status
+                                </label>
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="pending">Pending</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="failed">Failed</option>
+                                    <option value="refunded">Refunded</option>
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
                 
                 <div className="mt-8 border-t border-gray-200 pt-4">
-                    <div className="bg-gray-50 p-4 rounded text-sm text-gray-600 mb-6">
-                        <p className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Your payment information is encrypted and secure. We do not store your complete card details.
-                        </p>
+                    <div className="bg-gray-50 p-4 rounded text-sm text-gray-600 mb-6 flex items-center">
+                        <AiFillSafetyCertificate className="mr-2" />
+                        <p>Your payment information is encrypted and secure. We do not store your complete card details.</p>
                     </div>
                     
                     <div className="flex justify-end space-x-3">
@@ -307,7 +426,7 @@ const PaymentForm = () => {
                                     </svg>
                                     Processing...
                                 </>
-                            ) : `Pay $${formData.amount ? parseFloat(formData.amount).toFixed(2) : '0.00'}`}
+                            ) : (id ? 'Update Payment' : 'Complete Payment')}
                         </button>
                     </div>
                 </div>

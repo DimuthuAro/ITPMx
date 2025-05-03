@@ -21,10 +21,7 @@ const validatePayment = (req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     const payments = await Payment.find().populate('user', 'username email');
-    res.json({
-      success: true,
-      data: payments
-    });
+    res.json(payments);
   } catch (error) {
     res.status(500).json({ 
       success: false,

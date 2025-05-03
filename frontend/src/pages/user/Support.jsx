@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import UserLayout from '../../components/user/UserLayout';
 import { useAuth } from '../../context/AuthContext';
-import Chatbot from '../../components/user/Chatbot';
 
+import { createTicket } from '../../services/api'; // Assuming you have an API function to create tickets
 const Support = () => {
     const { currentUser } = useAuth();
     const [formData, setFormData] = useState({
@@ -35,10 +35,19 @@ const Support = () => {
         setIsSubmitting(true);
         setErrorMessage('');
         setSuccessMessage('');
-
+        
         try {
-            // Submit the form data to the backend
-            const response = await createTicket(formData); // Assuming createTicket is imported
+            // Create a new object with the latest form data and user information
+            const ticketData = {
+                ...formData,
+                user: currentUser?.id, // Directly use currentUser.id
+                name: currentUser?.username || formData.name,
+                email: currentUser?.email || formData.email,
+            };
+            
+            // Submit the ticket data to the backend
+            const response = await createTicket(ticketData);
+            console.log('Response:', response);
             setSuccessMessage('Your support ticket has been submitted successfully. Our team will contact you shortly.');
 
             // Reset form
@@ -141,23 +150,20 @@ const Support = () => {
                     
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                            <div>
-                                <label htmlFor="user" className="block text-gray-300 font-medium mb-2">User ID</label>
                                 <input
+                                    hidden
                                     type="text"
                                     id="user"
                                     name="user"
                                     value={formData.user}
                                     onChange={handleChange}
-                                    required
                                     className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
-                            </div>
 
                             <div>
                                 <label htmlFor="name" className="block text-gray-300 font-medium mb-2">Name</label>
                                 <input
+                                    
                                     type="text"
                                     id="name"
                                     name="name"
@@ -171,6 +177,7 @@ const Support = () => {
                             <div>
                                 <label htmlFor="email" className="block text-gray-300 font-medium mb-2">Email</label>
                                 <input
+                                    
                                     type="email"
                                     id="email"
                                     name="email"
@@ -286,8 +293,7 @@ const Support = () => {
                 </div>
             </div>
             
-            {/* Add Chatbot component */}
-            <Chatbot apiKey={geminiApiKey} />
+
         </UserLayout>
     );
 };

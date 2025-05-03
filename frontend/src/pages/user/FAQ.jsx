@@ -69,46 +69,7 @@ const FAQ = () => {
             question: "Are there any mobile apps available?",
             answer: "We're currently developing mobile applications for both iOS and Android platforms. The beta version should be available for testing soon. In the meantime, our website is fully responsive and works well on mobile browsers."
         },
-        {
-            question: "How do I create a new note?",
-            answer: "You can create a new note by navigating to the Dashboard and clicking on the 'Create Note' button. Fill in the note details in the form provided and click 'Save' to create your note."
-        },
-        {
-            question: "What payment methods are accepted?",
-            answer: "We currently accept major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers. You can manage your payment methods in the Payment section of your account."
-        },
-        {
-            question: "How can I change my subscription plan?",
-            answer: "To change your subscription plan, navigate to the Pricing page, select your desired plan, and follow the payment process. Your subscription will be updated immediately, and any price differences will be prorated."
-        },
-        {
-            question: "How secure is my data?",
-            answer: "We take data security very seriously. All your data is encrypted both in transit and at rest. We implement industry-standard security practices and regularly audit our systems to ensure your information remains protected."
-        },
-        {
-            question: "Can I export my notes?",
-            answer: "Yes, you can export your notes in various formats including PDF, plain text, and HTML. Look for the export option in the note details page or select multiple notes from the Dashboard to perform batch exports."
-        },
-        {
-            question: "How do I reset my password?",
-            answer: "If you've forgotten your password, click on 'Forgot Password' on the login page. You'll receive an email with instructions to reset your password. For security reasons, password reset links expire after 24 hours."
-        },
-        {
-            question: "Is there a limit on how many notes I can create?",
-            answer: "The number of notes you can create depends on your subscription plan. Basic plans allow up to 2,500 notes, Standard plans allow up to 7,500 notes, and Premium plans offer unlimited notes. You can view your current usage in your account settings."
-        },
-        {
-            question: "How do I contact customer support?",
-            answer: "You can contact our customer support team through the Support page by creating a support ticket. We aim to respond to all inquiries within 24 hours. Premium subscribers have access to priority support with faster response times."
-        },
-        {
-            question: "Can I use the application offline?",
-            answer: "Yes, our web application has offline capabilities. You can continue creating and editing notes even without an internet connection. Your changes will automatically sync once you're back online."
-        },
-        {
-            question: "How do I cancel my subscription?",
-            answer: "You can cancel your subscription at any time from your account settings. Navigate to the Subscription section and click on 'Cancel Subscription'. Your access will remain active until the end of the current billing period."
-        }
+      
     ];
 
     return (
@@ -132,7 +93,7 @@ const FAQ = () => {
                                     onClick={() => toggleQuestion(index)}
                                     className="flex w-full justify-between items-center text-left focus:outline-none"
                                 >
-                                    <h3 className="text-lg font-semibold text-white">{faq.question}</h3>
+                                    <h3 className="text-xl font-semibold text-white">{faq.question}</h3>
                                     <svg
                                         className={`w-6 h-6 text-blue-400 transition-transform duration-200 ${
                                             openIndex === index ? 'transform rotate-180' : ''

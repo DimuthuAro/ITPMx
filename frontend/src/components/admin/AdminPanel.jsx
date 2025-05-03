@@ -432,14 +432,18 @@ const AdminPanel = () => {
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Ticket Management</h2>
 
-
+        {/* Only render the TicketForm when editing a ticket */}
+        {editingTicket && (
+          <TicketForm
+            onTicketUpdated={handleTicketUpdated}
+            editingTicket={editingTicket}
+            setEditingTicket={setEditingTicket}
+          />
+        )}
 
         <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>
             <tr>
-              <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Title
-              </th>
               <th className="py-2 px-4 border-b border-gray-600 bg-gray-900 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Name
               </th>
@@ -473,7 +477,6 @@ const AdminPanel = () => {
             ) : (
               tickets.map(ticket => (
                 <tr key={ticket._id}>
-                  <td className="py-2 px-4 border-b border-gray-600">{ticket.title}</td>
                   <td className="py-2 px-4 border-b border-gray-600">{ticket.name}</td>
                   <td className="py-2 px-4 border-b border-gray-600">{ticket.email}</td>
                   <td className="py-2 px-4 border-b border-gray-600">
@@ -511,7 +514,7 @@ const AdminPanel = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteTicket(ticket._id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mr-2"
                     >
                       Delete
                     </button>
@@ -536,13 +539,15 @@ const AdminPanel = () => {
     return (
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Payment Management</h2>
-
-        <PaymentForm
-          onPaymentAdded={handlePaymentCreated}
-          onPaymentUpdated={handlePaymentUpdated}
-          editingPayment={editingPayment}
-          setEditingPayment={setEditingPayment}
-        />
+        
+        {/* Only render the PaymentForm when editing a payment */}
+        {editingPayment && (
+          <PaymentForm
+            onPaymentUpdated={handlePaymentUpdated}
+            editingPayment={editingPayment}
+            setEditingPayment={setEditingPayment}
+          />
+        )}
 
         <table className="min-w-full bg-gray-800 text-gray-200 border border-gray-700">
           <thead>

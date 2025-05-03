@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { createPayment, updatePayment, getUsers } from '../../services/api';
+import { updatePayment, getUsers } from '../../services/api';
 
-const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEditingPayment }) => {
+const PaymentForm = ({ onPaymentUpdated, editingPayment, setEditingPayment }) => {
+    // If there's no payment being edited, don't render the form
+    if (!editingPayment) return null;
+
     const [users, setUsers] = useState([]);
     const initialFormState = {
         user: '',
@@ -19,7 +22,6 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
     const [formData, setFormData] = useState(initialFormState);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
-    const [showForm, setShowForm] = useState(false);
 
     // Load users for the dropdown
     useEffect(() => {
@@ -38,7 +40,6 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
     // Set form data when editing payment changes
     useEffect(() => {
         if (editingPayment) {
-            setShowForm(true);
             setFormData({
                 user: editingPayment.user?._id || editingPayment.user || '',
                 name: editingPayment.name || '',
@@ -70,7 +71,6 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
 
     const handleCancel = () => {
         resetForm();
-        setShowForm(false);
     };
 
     const handleSubmit = async (e) => {
@@ -80,17 +80,30 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
 
         try {
             if (editingPayment) {
-                await updatePayment(editingPayment._id, formData);
-                onPaymentUpdated({ ...editingPayment, ...formData });
+                // Create a copy of the form data to send to the API
+                const paymentDataToUpdate = { ...formData };
+                
+                // Make sure we're sending the user ID, not the entire user object
+                if (paymentDataToUpdate.user && typeof paymentDataToUpdate.user === 'object') {
+                    paymentDataToUpdate.user = paymentDataToUpdate.user._id;
+                }
+                
+                await updatePayment(editingPayment._id, paymentDataToUpdate);
+                
+                // For the UI update, preserve the full user object from the original payment
+                // to prevent the "Unknown" display issue
+                const updatedPayment = {
+                    ...editingPayment,
+                    ...formData,
+                    user: editingPayment.user // Keep the original user object intact
+                };
+                
+                onPaymentUpdated(updatedPayment);
                 setEditingPayment(null);
-            } else {
-                const newPayment = await createPayment(formData);
-                onPaymentAdded(newPayment);
             }
             resetForm();
-            setShowForm(false);
         } catch (err) {
-            setError(err.response?.data?.message || 'An error occurred while saving the payment');
+            setError(err.response?.data?.message || 'An error occurred while updating the payment');
         } finally {
             setIsSubmitting(false);
         }
@@ -98,37 +111,28 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
 
     return (
         <div className="mb-6">
-            {!showForm ? (
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                >
-                    {editingPayment ? 'Edit Payment' : 'Add New Payment'}
-                </button>
-            ) : (
-                <div className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white">
-                        {editingPayment ? 'Edit Payment' : 'Create New Payment'}
-                    </h3>
+            <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700/50 shadow-lg">
+                <h3 className="text-xl font-semibold text-white mb-6">
+                    Edit Payment Details
+                </h3>
 
-                    {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-                            {error}
-                        </div>
-                    )}
+                {error && (
+                    <div className="bg-red-900/40 border-l-4 border-red-500 text-red-100 p-4 rounded-lg backdrop-blur-sm mb-6" role="alert">
+                        {error}
+                    </div>
+                )}
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="user">
-                                User
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-gray-300 font-medium mb-2" htmlFor="user">
+                                User *
                             </label>
                             <select
-                                id="user"
-                                name="user"
+                                disabled
                                 value={formData.user}
                                 onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                required
+                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="">Select a user</option>
                                 {users.map(user => (
@@ -139,9 +143,9 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                             </select>
                         </div>
 
-                        <div className="mb-4">
-                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="name">
-                                Payment Name
+                        <div>
+                            <label className="block text-gray-300 font-medium mb-2" htmlFor="name">
+                                Customer Name *
                             </label>
                             <input
                                 id="name"
@@ -149,14 +153,14 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                                 type="text"
                                 value={formData.name}
                                 onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 required
                             />
                         </div>
 
-                        <div className="mb-4">
-                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="amount">
-                                Amount
+                        <div>
+                            <label className="block text-gray-300 font-medium mb-2" htmlFor="amount">
+                                Amount *
                             </label>
                             <input
                                 id="amount"
@@ -165,98 +169,30 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                                 step="0.01"
                                 value={formData.amount}
                                 onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 required
                             />
                         </div>
 
-                        <div className="mb-4">
-                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="payment_method">
-                                Payment Method
+                        <div>
+                            <label className="block text-gray-300 font-medium mb-2" htmlFor="payment_method">
+                                Payment Method *
                             </label>
                             <select
                                 id="payment_method"
                                 name="payment_method"
                                 value={formData.payment_method}
                                 onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 required
                             >
-                                <option value="credit_card">Credit Card</option>
-                                <option value="paypal">PayPal</option>
-                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="visa">Visa</option>
+                                <option value="mastercard">MasterCard</option>
                             </select>
                         </div>
 
-                        {formData.payment_method === 'credit_card' && (
-                            <>
-                                <div className="mb-4">
-                                    <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="card_name">
-                                        Name on Card
-                                    </label>
-                                    <input
-                                        id="card_name"
-                                        name="card_name"
-                                        type="text"
-                                        value={formData.card_name}
-                                        onChange={handleChange}
-                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                        required={formData.payment_method === 'credit_card'}
-                                    />
-                                </div>
-
-                                <div className="mb-4">
-                                    <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="card_number">
-                                        Card Number
-                                    </label>
-                                    <input
-                                        id="card_number"
-                                        name="card_number"
-                                        type="text"
-                                        value={formData.card_number}
-                                        onChange={handleChange}
-                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                        required={formData.payment_method === 'credit_card'}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="mb-4">
-                                        <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="cvv">
-                                            CVV
-                                        </label>
-                                        <input
-                                            id="cvv"
-                                            name="cvv"
-                                            type="text"
-                                            value={formData.cvv}
-                                            onChange={handleChange}
-                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                            required={formData.payment_method === 'credit_card'}
-                                        />
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="expire_date">
-                                            Expiry Date
-                                        </label>
-                                        <input
-                                            id="expire_date"
-                                            name="expire_date"
-                                            type="text"
-                                            placeholder="MM/YY"
-                                            value={formData.expire_date}
-                                            onChange={handleChange}
-                                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                            required={formData.payment_method === 'credit_card'}
-                                        />
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        <div className="mb-4">
-                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="status">
+                        <div>
+                            <label className="block text-gray-300 font-medium mb-2" htmlFor="status">
                                 Status
                             </label>
                             <select
@@ -264,7 +200,7 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="pending">Pending</option>
                                 <option value="completed">Completed</option>
@@ -273,42 +209,107 @@ const PaymentForm = ({ onPaymentAdded, onPaymentUpdated, editingPayment, setEdit
                             </select>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-gray-200 text-sm font-bold mb-2" htmlFor="description">
-                                Description
-                            </label>
-                            <textarea
-                                id="description"
-                                name="description"
-                                value={formData.description}
-                                onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                rows="3"
-                            />
-                        </div>
 
-                        <div className="flex items-center justify-between">
-                            <button
-                                type="submit"
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting
-                                    ? (editingPayment ? 'Updating...' : 'Creating...')
-                                    : (editingPayment ? 'Update Payment' : 'Create Payment')}
-                            </button>
+                        {formData.payment_method === 'credit_card' && (
+                            <>
+                                <div>
+                                    <label className="block text-gray-300 font-medium mb-2" htmlFor="card_name">
+                                        Name on Card *
+                                    </label>
+                                    <input
+                                        id="card_name"
+                                        name="card_name"
+                                        type="text"
+                                        value={formData.card_name}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required={formData.payment_method === 'credit_card'}
+                                    />
+                                </div>
 
+                                <div>
+                                    <label className="block text-gray-300 font-medium mb-2" htmlFor="card_number">
+                                        Card Number *
+                                    </label>
+                                    <input
+                                        id="card_number"
+                                        name="card_number"
+                                        type="text"
+                                        value={formData.card_number}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required={formData.payment_method === 'credit_card'}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-300 font-medium mb-2" htmlFor="cvv">
+                                        CVV *
+                                    </label>
+                                    <input
+                                        id="cvv"
+                                        name="cvv"
+                                        type="text"
+                                        value={formData.cvv}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required={formData.payment_method === 'credit_card'}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-300 font-medium mb-2" htmlFor="expire_date">
+                                        Expiry Date *
+                                    </label>
+                                    <input
+                                        id="expire_date"
+                                        name="expire_date"
+                                        type="text"
+                                        placeholder="MM/YY"
+                                        value={formData.expire_date}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required={formData.payment_method === 'credit_card'}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="flex items-center justify-end col-span-2">
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 mr-4"
                             >
                                 Cancel
                             </button>
+                            
+                            <button
+                                type="submit"
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center gap-2 disabled:opacity-60"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Updating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                        Update Payment
+                                    </>
+                                )}
+                            </button>
                         </div>
-                    </form>
-                </div>
-            )}
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };

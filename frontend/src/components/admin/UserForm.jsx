@@ -17,7 +17,7 @@ const UserForm = ({ onUserCreated, onUserUpdated, editingUser, setEditingUser })
             setFormData({
                 username: editingUser.username || '',
                 email: editingUser.email || '',
-                password: '', // Password should not be pre-filled for security reasons
+                password: '', 
                 role: editingUser.role || 'user'
             });
             setShowForm(true);

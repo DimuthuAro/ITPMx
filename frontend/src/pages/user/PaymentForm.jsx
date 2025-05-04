@@ -19,6 +19,19 @@ const PaymentForm = () => {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     
+    // Field-specific validation errors
+    const [validationErrors, setValidationErrors] = useState({
+        name: '',
+        card_name: '',
+        card_number: '',
+        expire_date: '',
+        cvv: '',
+        amount: ''
+    });
+    
+    // Credit card type detection based on card number
+    const [detectedCardType, setDetectedCardType] = useState('');
+    
     // Get plan details from location state if coming from pricing page
     const planType = location.state?.planType || '';
     const planPrice = location.state?.price || '';
@@ -77,6 +90,33 @@ const PaymentForm = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        const errors = {...validationErrors};
+        
+        // Prevent numbers in name fields - only allow letters and spaces
+        if (name === 'name' || name === 'card_name') {
+            // Remove numbers from input
+            const lettersAndSpacesOnly = value.replace(/[0-9]/g, '');
+            
+            // If the value contains numbers, use the cleaned version
+            if (lettersAndSpacesOnly !== value) {
+                // Update form directly with cleaned value
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: lettersAndSpacesOnly
+                }));
+                return; // Exit early to prevent duplicate state updates
+            }
+            
+            // Validate minimum length (at least 2 characters)
+            if (lettersAndSpacesOnly.length > 0 && lettersAndSpacesOnly.length < 2) {
+                errors[name] = "Please enter at least 2 characters";
+            } else {
+                delete errors[name];
+            }
+            
+            // Update validation errors
+            setValidationErrors(errors);
+        }
         
         // Format card number with spaces
         if (name === 'card_number') {
@@ -90,6 +130,15 @@ const PaymentForm = () => {
             // Trim extra space and limit to 19 characters (16 digits + 3 spaces)
             formatted = formatted.trim().slice(0, 19);
             setFormData(prev => ({ ...prev, [name]: formatted }));
+            
+            // Detect card type based on number
+            if (/^4/.test(cleaned)) {
+                setDetectedCardType('Visa');
+            } else if (/^5[1-5]/.test(cleaned)) {
+                setDetectedCardType('Mastercard');
+            } else {
+                setDetectedCardType('');
+            }
             return;
         }
         
@@ -148,6 +197,7 @@ const PaymentForm = () => {
             errors.amount = "Please enter a valid amount";
         }
         
+        setValidationErrors(errors);
         return errors;
     };
 
@@ -170,7 +220,7 @@ const PaymentForm = () => {
                 ...formData,
                 card_number: formData.card_number.replace(/\s/g, ''), // Remove spaces
                 amount: parseFloat(formData.amount),
-                user: currentUser.id // Add user ID for new payments
+                user: currentUser.id // Only pass the user ID for association, not their name
             };
             
             let response;
@@ -259,6 +309,9 @@ const PaymentForm = () => {
                                 required
                                 className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                            {validationErrors.name && (
+                                <p className="text-red-500 text-sm mt-1">{validationErrors.name}</p>
+                            )}
                         </div>
                         
                         <div>
@@ -291,6 +344,9 @@ const PaymentForm = () => {
                                     <span>Mastercard</span>
                                 </label>
                             </div>
+                            {detectedCardType && (
+                                <p className="text-blue-500 text-sm mt-1">Detected Card Type: {detectedCardType}</p>
+                            )}
                         </div>
                         
                         <div>
@@ -306,6 +362,9 @@ const PaymentForm = () => {
                                 placeholder="Exactly as shown on card"
                                 className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                            {validationErrors.card_name && (
+                                <p className="text-red-500 text-sm mt-1">{validationErrors.card_name}</p>
+                            )}
                         </div>
                     </div>
                     
@@ -325,6 +384,9 @@ const PaymentForm = () => {
                                 className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 maxLength={19}
                             />
+                            {validationErrors.card_number && (
+                                <p className="text-red-500 text-sm mt-1">{validationErrors.card_number}</p>
+                            )}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
@@ -342,6 +404,9 @@ const PaymentForm = () => {
                                     className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     maxLength={5}
                                 />
+                                {validationErrors.expire_date && (
+                                    <p className="text-red-500 text-sm mt-1">{validationErrors.expire_date}</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
@@ -357,6 +422,9 @@ const PaymentForm = () => {
                                     className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     maxLength={4}
                                 />
+                                {validationErrors.cvv && (
+                                    <p className="text-red-500 text-sm mt-1">{validationErrors.cvv}</p>
+                                )}
                             </div>
                         </div>
                         
@@ -375,6 +443,9 @@ const PaymentForm = () => {
                                 placeholder="0.00"
                                 className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                            {validationErrors.amount && (
+                                <p className="text-red-500 text-sm mt-1">{validationErrors.amount}</p>
+                            )}
                         </div>
 
                         {id && (

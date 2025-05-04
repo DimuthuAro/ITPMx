@@ -14,6 +14,7 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showForm, setShowForm] = useState(false);
+    const [categoryError, setCategoryError] = useState('');
 
     // Load users for the dropdown
     useEffect(() => {
@@ -44,13 +45,27 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        
+        // Special validation for category field
+        if (name === 'category') {
+            // If the field is empty or first character is a letter
+            if (value === '' || /^[a-zA-Z].*/.test(value)) {
+                setFormData(prev => ({ ...prev, [name]: value }));
+                setCategoryError('');
+            } else {
+                // Show error but don't update the form value
+                setCategoryError('Category must start with a letter, not a number');
+            }
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const resetForm = () => {
         setFormData(initialFormState);
         setEditingNote && setEditingNote(null);
         setError(null);
+        setCategoryError('');
     };
 
     const handleCancel = () => {
@@ -60,6 +75,13 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validate category before submission
+        if (formData.category && /^[0-9]/.test(formData.category)) {
+            setCategoryError('Category must start with a letter, not a number');
+            return;
+        }
+        
         setIsSubmitting(true);
         setError(null);
 
@@ -143,8 +165,12 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
                                 type="text"
                                 value={formData.category}
                                 onChange={handleChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                className={`shadow appearance-none border ${categoryError ? 'border-red-500' : ''} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+                                placeholder="Start with a letter, not a number"
                             />
+                            {categoryError && (
+                                <p className="text-red-500 text-xs italic mt-1">{categoryError}</p>
+                            )}
                         </div>
 
                         <div className="mb-6">
@@ -172,7 +198,7 @@ const NoteForm = ({ onNoteAdded, onNoteUpdated, editingNote, setEditingNote }) =
                             <button
                                 type="submit"
                                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || categoryError !== ''}
                             >
                                 {isSubmitting
                                     ? (editingNote ? 'Updating...' : 'Creating...')

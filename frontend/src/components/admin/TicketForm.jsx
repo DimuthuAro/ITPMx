@@ -60,7 +60,6 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
                 setFormData(prev => ({
                     ...prev,
                     name: selectedUser.name || selectedUser.username || prev.name,
-                    email: selectedUser.email || prev.email
                 }));
             }
         }
@@ -127,15 +126,6 @@ const TicketForm = ({ onTicketAdded, onTicketUpdated, editingTicket, setEditingT
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <input 
-                            hidden
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"  
-                            />
-
                         <div>
                             <label className="block text-gray-300 font-medium mb-2" htmlFor="name">
                                 Name *

@@ -36,6 +36,7 @@ const TicketForm = () => {
             const ticketData = {
                 ...formData,
                 user: currentUser.id, // Changed from user_id to user to match backend model
+                status: 'open', // Explicitly set status to ensure it matches what admin expects
             };
             
             const response = await createTicket(ticketData);

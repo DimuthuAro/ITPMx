@@ -11,6 +11,9 @@ import TicketForm from '../admin/TicketForm';
 import PaymentForm from '../admin/PaymentForm';
 import NoteForm from '../admin/NoteForm';
 import { useAuth } from '../../context/AuthContext';
+// Import jspdf and jspdf-autotable for PDF generation
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -40,6 +43,12 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Search state
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [paymentSearchQuery, setPaymentSearchQuery] = useState('');
+  const [ticketSearchQuery, setTicketSearchQuery] = useState('');
+  const [noteSearchQuery, setNoteSearchQuery] = useState('');
 
   // State for editing items
   const [editingUser, setEditingUser] = useState(null);
@@ -356,9 +365,139 @@ const AdminPanel = () => {
 
   // Render user list
   const renderUsers = () => {
+    // Filter users based on search query
+    const filteredUsers = users.filter(user => {
+      // If no search query, return all users
+      if (!userSearchQuery) {
+        return true;
+      }
+      
+      const query = userSearchQuery.toLowerCase();
+      const matchesQuery = (
+        (user.username && user.username.toLowerCase().includes(query)) ||
+        (user.email && user.email.toLowerCase().includes(query)) ||
+        (user.role && user.role.toLowerCase().includes(query))
+      );
+      
+      return matchesQuery;
+    });
+    
+    // Download individual user record as PDF
+    const handleDownloadSinglePDF = (user) => {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("User Record", 105, 15, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text("ITPMx System", 105, 22, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: 'center' });
+      
+      doc.setLineWidth(0.5);
+      doc.line(20, 32, 190, 32);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.text("User Details", 20, 42);
+      
+      // User information
+      const startY = 50;
+      const lineHeight = 8;
+      
+      doc.setFontSize(11);
+      doc.text(`User ID: ${user._id || 'N/A'}`, 20, startY);
+      doc.text(`Username: ${user.username || 'N/A'}`, 20, startY + lineHeight);
+      doc.text(`Email: ${user.email || 'N/A'}`, 20, startY + lineHeight * 2);
+      doc.text(`Role: ${user.role || 'user'}`, 20, startY + lineHeight * 3);
+      doc.text(`Date Created: ${new Date(user.created_at).toLocaleDateString()}`, 20, startY + lineHeight * 4);
+      
+      if (user.last_login) {
+        doc.text(`Last Login: ${new Date(user.last_login).toLocaleDateString()} ${new Date(user.last_login).toLocaleTimeString()}`, 20, startY + lineHeight * 5);
+      }
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('This is an official document from ITPMx System.', 105, 280, { align: 'center' });
+      
+      doc.save(`user_${user._id}.pdf`);
+    };
+    
+    // Download all users as PDF
+    const handleDownloadAllPDF = () => {
+      const doc = new jsPDF();
+      
+      doc.setFontSize(16);
+      doc.text("Users Report", 105, 15, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text("ITPMx System", 105, 22, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: 'center' });
+      doc.text(`Total Users: ${filteredUsers.length}`, 105, 34, { align: 'center' });
+      
+      doc.setLineWidth(0.5);
+      doc.line(20, 38, 190, 38);
+      
+      // Create table with autoTable plugin
+      doc.autoTable({
+        startY: 45,
+        head: [['Username', 'Email', 'Role', 'Created Date']],
+        body: filteredUsers.map(user => [
+          user.username || 'N/A',
+          user.email || 'N/A',
+          user.role || 'user',
+          new Date(user.created_at).toLocaleDateString()
+        ]),
+        theme: 'striped',
+        headStyles: {
+          fillColor: [66, 66, 66],
+          textColor: [250, 250, 250]
+        },
+        alternateRowStyles: {
+          fillColor: [240, 240, 240]
+        }
+      });
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('This is an official document from ITPMx System.', 105, 280, { align: 'center' });
+      
+      // Save the PDF with a custom name
+      doc.save(`users_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    };
+
     return (
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">User Management</h2>
+        
+        {/* Search bar and download all button */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative w-full md:w-1/2">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+              </svg>
+            </div>
+            <input 
+              type="search" 
+              className="bg-gray-700 border border-gray-600 text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5" 
+              placeholder="Search by username, email, role..." 
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={handleDownloadAllPDF}
+            className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 flex items-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Download Users PDF
+          </button>
+        </div>
 
         <UserForm
           onUserCreated={handleUserCreated}
@@ -388,49 +527,182 @@ const AdminPanel = () => {
             </tr>
           </thead>
           <tbody>
-            {users && users.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan="5" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
-                  No users found
+                  {users.length === 0 ? "No users found" : "No users match your search criteria"}
                 </td>
               </tr>
             ) : (
-              users.map(user => (
+              filteredUsers.map(user => (
                 <tr key={user._id}>
                   <td className="py-2 px-4 border-b border-gray-600">{user.username}</td>
                   <td className="py-2 px-4 border-b border-gray-600">{user.email}</td>
-                  <td className="py-2 px-4 border-b border-gray-600">{user.role || 'user'}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                      user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {user.role || 'user'}
+                    </span>
+                  </td>
                   <td className="py-2 px-4 border-b border-gray-600">
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-2 px-4 border-b border-gray-600">
-                    <button
-                      onClick={() => handleEditUser(user)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user._id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex flex-row items-center space-x-1">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                        title="Edit User"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user._id)}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                        title="Delete User"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDownloadSinglePDF(user)}
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
+                        title="Download as PDF"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        
+        {/* User statistics summary */}
+        {filteredUsers.length > 0 && (
+          <div className="mt-4 p-4 bg-gray-700/50 rounded-lg text-sm">
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <span className="font-semibold">Total Users:</span> {filteredUsers.length}
+              </div>
+              <div>
+                <span className="font-semibold">Admins:</span> {filteredUsers.filter(u => u.role === 'admin').length}
+              </div>
+              <div>
+                <span className="font-semibold">Regular Users:</span> {filteredUsers.filter(u => u.role !== 'admin').length}
+              </div>
+              <div>
+                <span className="font-semibold">Recent Users:</span> {filteredUsers.filter(u => {
+                  const thirtyDaysAgo = new Date();
+                  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                  return new Date(u.created_at) > thirtyDaysAgo;
+                }).length} (last 30 days)
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   // Render ticket list
   const renderTickets = () => {
+    // Filter tickets based on search query
+    const filteredTickets = tickets.filter(ticket => {
+      // If no search query, return all tickets
+      if (!ticketSearchQuery) {
+        return true;
+      }
+      
+      const query = ticketSearchQuery.toLowerCase();
+      const matchesQuery = (
+        (ticket.name && ticket.name.toLowerCase().includes(query)) ||
+        (ticket.email && ticket.email.toLowerCase().includes(query)) ||
+        (ticket.status && ticket.status.toLowerCase().includes(query)) ||
+        (ticket.priority && ticket.priority.toLowerCase().includes(query)) ||
+        (ticket.inquiry_type && ticket.inquiry_type.toLowerCase().includes(query))
+      );
+      
+      return matchesQuery;
+    });
+    
+    // Download individual ticket record as PDF
+    const handleDownloadSinglePDF = (ticket) => {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("Ticket Record", 105, 15, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text("ITPMx System", 105, 22, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: 'center' });
+      
+      doc.setLineWidth(0.5);
+      doc.line(20, 32, 190, 32);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.text("Ticket Details", 20, 42);
+      
+      // Ticket information
+      const startY = 50;
+      const lineHeight = 8;
+      
+      doc.setFontSize(11);
+      doc.text(`Ticket ID: ${ticket._id || 'N/A'}`, 20, startY);
+      doc.text(`Name: ${ticket.name || 'N/A'}`, 20, startY + lineHeight);
+      doc.text(`Email: ${ticket.email || 'N/A'}`, 20, startY + lineHeight * 2);
+      doc.text(`Type: ${ticket.inquiry_type?.replace('_', ' ') || 'N/A'}`, 20, startY + lineHeight * 3);
+      doc.text(`Status: ${ticket.status || 'N/A'}`, 20, startY + lineHeight * 4);
+      doc.text(`Priority: ${ticket.priority || 'N/A'}`, 20, startY + lineHeight * 5);
+      doc.text(`Date: ${new Date(ticket.created_at).toLocaleDateString()}`, 20, startY + lineHeight * 6);
+      
+      if (ticket.message) {
+        doc.text("Message:", 20, startY + lineHeight * 7);
+        
+        // Handle long messages with wrapping
+        const splitMessage = doc.splitTextToSize(ticket.message, 170);
+        doc.text(splitMessage, 20, startY + lineHeight * 8);
+      }
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('This is an official document from ITPMx System.', 105, 280, { align: 'center' });
+      
+      doc.save(`ticket_${ticket._id}.pdf`);
+    };
+
     return (
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Ticket Management</h2>
+        
+        {/* Search bar */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative w-full md:w-1/2">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+              </svg>
+            </div>
+            <input 
+              type="search" 
+              className="bg-gray-700 border border-gray-600 text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5" 
+              placeholder="Search by name, email, status, priority..." 
+              value={ticketSearchQuery}
+              onChange={(e) => setTicketSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
 
         {/* Only render the TicketForm when editing a ticket */}
         {editingTicket && (
@@ -468,16 +740,19 @@ const AdminPanel = () => {
             </tr>
           </thead>
           <tbody>
-            {tickets && tickets.length === 0 ? (
+            {filteredTickets.length === 0 ? (
               <tr>
-                <td colSpan="8" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
-                  No tickets found
+                <td colSpan="7" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
+                  {tickets.length === 0 ? "No tickets found" : "No tickets match your search criteria"}
                 </td>
               </tr>
             ) : (
-              tickets.map(ticket => (
+              filteredTickets.map(ticket => (
                 <tr key={ticket._id}>
-                  <td className="py-2 px-4 border-b border-gray-600">{ticket.name}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
+                    {/* Use username if user object exists, otherwise fall back to ticket.name */}
+                    {ticket.name || ticket.name || 'Unknown'}
+                  </td>
                   <td className="py-2 px-4 border-b border-gray-600">{ticket.email}</td>
                   <td className="py-2 px-4 border-b border-gray-600">
                     <span className={`px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800`}>
@@ -506,39 +781,159 @@ const AdminPanel = () => {
                     {new Date(ticket.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-2 px-4 border-b border-gray-600">
-                    <button
-                      onClick={() => handleEditTicket(ticket)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTicket(ticket._id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mr-2"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      onClick={() => handleViewTicket(ticket._id)}
-                      className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
-                    >
-                      View
-                    </button>
+                    <div className="flex flex-row items-center space-x-1">
+                      <button
+                        onClick={() => handleEditTicket(ticket)}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                        title="Edit Ticket"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTicket(ticket._id)}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                        title="Delete Ticket"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleViewTicket(ticket._id)}
+                        className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-1 px-2 rounded"
+                        title="View Ticket Details"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDownloadSinglePDF(ticket)}
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
+                        title="Download as PDF"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        
+        {/* Ticket summary */}
+        <div className="mt-4 p-4 bg-gray-700/50 rounded-lg text-sm">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <span className="font-semibold">Total Tickets:</span> {filteredTickets.length}
+            </div>
+            <div>
+              <span className="font-semibold">Open:</span> {filteredTickets.filter(t => t.status === 'open').length}
+            </div>
+            <div>
+              <span className="font-semibold">In Progress:</span> {filteredTickets.filter(t => t.status === 'in_progress').length}
+            </div>
+            <div>
+              <span className="font-semibold">Resolved:</span> {filteredTickets.filter(t => t.status === 'resolved').length}
+            </div>
+            <div>
+              <span className="font-semibold">High Priority:</span> {filteredTickets.filter(t => t.priority === 'high').length}
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
 
   // Render payment list
   const renderPayments = () => {
+    // Filter payments based on search query only (removing filter)
+    const filteredPayments = payments.filter(payment => {
+      // If no search query, return all payments
+      if (!paymentSearchQuery) {
+        return true;
+      }
+      
+      const query = paymentSearchQuery.toLowerCase();
+      const matchesQuery = (
+        (payment.user?.username && payment.user.username.toLowerCase().includes(query)) ||
+        (payment.payment_method && payment.payment_method.toLowerCase().includes(query)) ||
+        (payment.status && payment.status.toLowerCase().includes(query)) ||
+        (payment.amount && payment.amount.toString().includes(query))
+      );
+      
+      return matchesQuery;
+    });
+
+    // Download individual payment record as PDF
+    const handleDownloadSinglePDF = (payment) => {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("Payment Record", 105, 15, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text("ITPMx System", 105, 22, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: 'center' });
+      
+      doc.setLineWidth(0.5);
+      doc.line(20, 32, 190, 32);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.text("Payment Details", 20, 42);
+      
+      // Payment information
+      const startY = 50;
+      const lineHeight = 8;
+      
+      doc.setFontSize(11);
+      doc.text(`Payment ID: ${payment._id || 'N/A'}`, 20, startY);
+      doc.text(`User: ${payment.user?.username || 'Unknown'}`, 20, startY + lineHeight);
+      doc.text(`Amount: $${payment.amount?.toFixed(2) || '0.00'}`, 20, startY + lineHeight * 2);
+      doc.text(`Payment Method: ${payment.payment_method || 'N/A'}`, 20, startY + lineHeight * 3);
+      doc.text(`Status: ${payment.status || 'N/A'}`, 20, startY + lineHeight * 4);
+      doc.text(`Date: ${new Date(payment.created_at).toLocaleDateString()}`, 20, startY + lineHeight * 5);
+      
+      if (payment.description) {
+        doc.text(`Description: ${payment.description}`, 20, startY + lineHeight * 6);
+      }
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('This is an official document from ITPMx System.', 105, 280, { align: 'center' });
+      
+      doc.save(`payment_${payment._id}.pdf`);
+    };
+
     return (
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Payment Management</h2>
+        
+        {/* Search bar without filter */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative w-full md:w-1/2">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+              </svg>
+            </div>
+            <input 
+              type="search" 
+              className="bg-gray-700 border border-gray-600 text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5" 
+              placeholder="Search by username, payment method, amount..." 
+              value={paymentSearchQuery}
+              onChange={(e) => setPaymentSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
         
         {/* Only render the PaymentForm when editing a payment */}
         {editingPayment && (
@@ -573,17 +968,17 @@ const AdminPanel = () => {
             </tr>
           </thead>
           <tbody>
-            {payments && payments.length === 0 ? (
+            {filteredPayments.length === 0 ? (
               <tr>
                 <td colSpan="6" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
-                  No payments found
+                  {payments.length === 0 ? "No payments found" : "No payments match your search criteria"}
                 </td>
               </tr>
             ) : (
-              payments.map(payment => (
+              filteredPayments.map(payment => (
                 <tr key={payment._id}>
                   <td className="py-2 px-4 border-b border-gray-600">
-                    {payment.user?.username || 'Unknown'}
+                    {payment.name || 'Unknown'}
                   </td>
                   <td className="py-2 px-4 border-b border-gray-600">
                     ${payment.amount?.toFixed(2)}
@@ -604,33 +999,150 @@ const AdminPanel = () => {
                     {new Date(payment.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-2 px-4 border-b border-gray-600">
-                    <button
-                      onClick={() => handleEditPayment(payment)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeletePayment(payment._id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex flex-row items-center space-x-1">
+                      <button
+                        onClick={() => handleEditPayment(payment)}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                        title="Edit Payment"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeletePayment(payment._id)}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                        title="Delete Payment"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDownloadSinglePDF(payment)}
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
+                        title="Download as PDF"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        
+        {/* Payment summary */}
+        <div className="mt-4 p-4 bg-gray-700/50 rounded-lg text-sm">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <span className="font-semibold">Total Payments:</span> {filteredPayments.length}
+            </div>
+            <div>
+              <span className="font-semibold">Total Amount:</span> ${filteredPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}
+            </div>
+            <div>
+              <span className="font-semibold">Completed:</span> {filteredPayments.filter(p => p.status === 'completed').length}
+            </div>
+            <div>
+              <span className="font-semibold">Pending:</span> {filteredPayments.filter(p => p.status === 'pending').length}
+            </div>
+            <div>
+              <span className="font-semibold">Failed:</span> {filteredPayments.filter(p => p.status === 'failed').length}
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
 
   // Render note list
   const renderNotes = () => {
+    // Filter notes based on search query
+    const filteredNotes = notes.filter(note => {
+      // If no search query, return all notes
+      if (!noteSearchQuery) {
+        return true;
+      }
+      
+      const query = noteSearchQuery.toLowerCase();
+      const matchesQuery = (
+        (note.title && note.title.toLowerCase().includes(query)) ||
+        (note.content && note.content.toLowerCase().includes(query)) ||
+        (note.category && note.category.toLowerCase().includes(query)) ||
+        (note.user?.username && note.user.username.toLowerCase().includes(query))
+      );
+      
+      return matchesQuery;
+    });
+
+    // Download individual note as PDF
+    const handleDownloadSinglePDF = (note) => {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("Note Record", 105, 15, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text("ITPMx System", 105, 22, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 105, 28, { align: 'center' });
+      
+      doc.setLineWidth(0.5);
+      doc.line(20, 32, 190, 32);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.text("Note Details", 20, 42);
+      
+      // Note information
+      const startY = 50;
+      const lineHeight = 8;
+      
+      doc.setFontSize(11);
+      doc.text(`Note ID: ${note._id || 'N/A'}`, 20, startY);
+      doc.text(`Title: ${note.title || 'N/A'}`, 20, startY + lineHeight);
+      doc.text(`Category: ${note.category || 'Uncategorized'}`, 20, startY + lineHeight * 2);
+      doc.text(`User: ${note.user?.username || 'Unknown'}`, 20, startY + lineHeight * 3);
+      doc.text(`Date: ${new Date(note.created_at).toLocaleDateString()}`, 20, startY + lineHeight * 4);
+      
+      doc.text("Content:", 20, startY + lineHeight * 6);
+      
+      // Handle long content with wrapping
+      const splitContent = doc.splitTextToSize(note.content || 'No content', 170);
+      doc.text(splitContent, 20, startY + lineHeight * 7);
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('This is an official document from ITPMx System.', 105, 280, { align: 'center' });
+      
+      doc.save(`note_${note._id}.pdf`);
+    };
+
     return (
       <div className="w-full overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Note Management</h2>
+        
+        {/* Search bar */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative w-full md:w-1/2">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+              </svg>
+            </div>
+            <input 
+              type="search" 
+              className="bg-gray-700 border border-gray-600 text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5" 
+              placeholder="Search by title, content, category, username..." 
+              value={noteSearchQuery}
+              onChange={(e) => setNoteSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
 
         <NoteForm
           onNoteAdded={handleNoteCreated}
@@ -663,14 +1175,14 @@ const AdminPanel = () => {
             </tr>
           </thead>
           <tbody>
-            {notes && notes.length === 0 ? (
+            {filteredNotes.length === 0 ? (
               <tr>
                 <td colSpan="6" className="py-4 px-6 border-b border-gray-600 text-center text-gray-400">
-                  No notes found
+                  {notes.length === 0 ? "No notes found" : "No notes match your search criteria"}
                 </td>
               </tr>
             ) : (
-              notes.map(note => (
+              filteredNotes.map(note => (
                 <tr key={note._id}>
                   <td className="py-2 px-4 border-b border-gray-600">{note.title}</td>
                   <td className="py-2 px-4 border-b border-gray-600">
@@ -678,7 +1190,11 @@ const AdminPanel = () => {
                       ? `${note.content.substring(0, 50)}...`
                       : note.content}
                   </td>
-                  <td className="py-2 px-4 border-b border-gray-600">{note.category || 'Uncategorized'}</td>
+                  <td className="py-2 px-4 border-b border-gray-600">
+                    <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                      {note.category || 'Uncategorized'}
+                    </span>
+                  </td>
                   <td className="py-2 px-4 border-b border-gray-600">
                     {note.user?.username || 'Unknown'}
                   </td>
@@ -686,24 +1202,56 @@ const AdminPanel = () => {
                     {new Date(note.created_at).toLocaleDateString()}
                   </td>
                   <td className="py-2 px-4 border-b border-gray-600">
-                    <button
-                      onClick={() => handleEditNote(note)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteNote(note._id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex flex-row items-center space-x-1">
+                      <button
+                        onClick={() => handleEditNote(note)}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                        title="Edit Note"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNote(note._id)}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                        title="Delete Note"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDownloadSinglePDF(note)}
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded"
+                        title="Download as PDF"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        
+        {/* Note summary */}
+        <div className="mt-4 p-4 bg-gray-700/50 rounded-lg text-sm">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <span className="font-semibold">Total Notes:</span> {filteredNotes.length}
+            </div>
+            <div>
+              <span className="font-semibold">With Categories:</span> {filteredNotes.filter(n => n.category && n.category.trim() !== '').length}
+            </div>
+            <div>
+              <span className="font-semibold">Uncategorized:</span> {filteredNotes.filter(n => !n.category || n.category.trim() === '').length}
+            </div>
+          </div>
+        </div>
       </div>
     );
   };

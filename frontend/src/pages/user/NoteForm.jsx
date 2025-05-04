@@ -21,6 +21,10 @@ const NoteForm = () => {
     const [userId, setUserId] = useState(null);
     const [scanning, setScanning] = useState(false);
     const [scanError, setScanError] = useState(null);
+    const [validationErrors, setValidationErrors] = useState({
+        title: '',
+        content: ''
+    });
 
     // --- Voice to Text (Web Speech API) ---
     const [isRecording, setIsRecording] = useState(false);
@@ -59,7 +63,9 @@ const NoteForm = () => {
             recognitionRef.current.stop();
         }
         setIsRecording(false);
-    }; useEffect(() => {
+    };
+
+    useEffect(() => {
         if (currentUser && (currentUser.id || currentUser._id)) {
             setUserId(currentUser.id || currentUser._id);
         } else {
@@ -95,12 +101,41 @@ const NoteForm = () => {
         }; fetchNote();
     }, [id, isEditing, currentUser]);
 
+    const validateTitle = (title) => {
+        if (title.length < 3) {
+            return "Title must be at least 3 characters long";
+        }
+        return "";
+    };
+
+    const validateContent = (content) => {
+        if (content.length < 5) {
+            return "Please enter at least 5 characters";
+        }
+        return "";
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prevState => ({
             ...prevState,
             [name]: value
         }));
+
+        // Validate fields when they change
+        if (name === 'title') {
+            setValidationErrors(prev => ({
+                ...prev,
+                title: validateTitle(value)
+            }));
+        }
+        
+        if (name === 'content') {
+            setValidationErrors(prev => ({
+                ...prev,
+                content: validateContent(value)
+            }));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -109,17 +144,27 @@ const NoteForm = () => {
         setError(null);
 
         try {
-            // Validate form (basic validation)
-            if (!formData.title.trim()) {
-                throw new Error('Title is required');
+            // Validate form fields
+            const titleError = validateTitle(formData.title.trim());
+            const contentError = validateContent(formData.content.trim());
+            
+            // Update validation errors state
+            setValidationErrors({
+                title: titleError,
+                content: contentError
+            });
+            
+            // If there are validation errors, don't proceed with submission
+            if (titleError || contentError) {
+                throw new Error(titleError || contentError);
             }
-            if (!formData.content.trim()) {
-                throw new Error('Content is required');
-            }
+            
             // Check if user is authenticated
             if (!currentUser?.id) {
                 throw new Error('You must be logged in to save a note');
-            }            // Prepare data including the user ID (ObjectId string)
+            }
+            
+            // Prepare data including the user ID (ObjectId string)
             const noteData = {
                 title: formData.title,
                 content: formData.content,
@@ -210,9 +255,12 @@ const NoteForm = () => {
                             name="title"
                             value={formData.title}
                             onChange={handleChange}
-                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`w-full border ${validationErrors.title ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                             required
                         />
+                        {validationErrors.title && (
+                            <p className="text-red-500 text-sm mt-1">{validationErrors.title}</p>
+                        )}
                     </div>
 
                     <div className="mb-4">
@@ -240,9 +288,12 @@ const NoteForm = () => {
                             value={formData.content}
                             onChange={handleChange}
                             rows="12"
-                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`w-full border ${validationErrors.content ? 'border-red-500' : 'border-gray-300'} rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                             required
                         />
+                        {validationErrors.content && (
+                            <p className="text-red-500 text-sm mt-1">{validationErrors.content}</p>
+                        )}
                     </div>
 
                     <div className="mb-4">

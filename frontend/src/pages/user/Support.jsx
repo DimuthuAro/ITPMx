@@ -21,13 +21,155 @@ const Support = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [validationErrors, setValidationErrors] = useState({});
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        
+        // Validation rules
+        let isValid = true;
+        const errors = {...validationErrors};
+
+        // Validate name (letters and spaces only)
+        if (name === 'name') {
+            const lettersAndSpacesOnly = value.replace(/[^A-Za-z\s]/g, '');
+            
+            // If the value contains non-letters/spaces, use the cleaned version
+            if (lettersAndSpacesOnly !== value) {
+                // Update form directly with cleaned value
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: lettersAndSpacesOnly
+                }));
+                return; // Exit early to prevent duplicate state updates
+            }
+            
+            delete errors.name; // Clear any previous name validation errors
+        }
+
+        // Validate phone (numbers only, exactly 10 digits)
+        if (name === 'phone') {
+            const numbersOnly = value.replace(/\D/g, '');
+            
+            // Limit to exactly 10 digits
+            const limitedNumbers = numbersOnly.slice(0, 10);
+            
+            // Update form with cleaned and limited value
+            setFormData(prev => ({
+                ...prev,
+                [name]: limitedNumbers
+            }));
+            
+            // Show error if not exactly 10 digits (only when user has started typing)
+            if (limitedNumbers.length > 0 && limitedNumbers.length !== 10) {
+                errors.phone = 'Phone number must be exactly 10 digits';
+            } else {
+                delete errors.phone;
+            }
+            
+            // Exit early as we've already updated the form state
+            return;
+        }
+
+        // Validate email format
+        if (name === 'email') {
+            if (!value.includes('@') && value.trim() !== '') {
+                errors.email = 'Email must contain @ symbol';
+                isValid = false;
+            } else {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value) && value.trim() !== '') {
+                    errors.email = 'Please enter a valid email address';
+                    isValid = false;
+                } else {
+                    delete errors.email;
+                }
+            }
+        }
+        
+        // Validate title length
+        if (name === 'title') {
+            if (value.length > 0 && value.length < 5) {
+                errors.title = 'Please enter at least 5 characters';
+                isValid = false;
+            } else {
+                delete errors.title;
+            }
+        }
+        
+        // Validate description length
+        if (name === 'description') {
+            if (value.length > 0 && value.length < 10) {
+                errors.description = 'Please enter at least 10 characters';
+                isValid = false;
+            } else {
+                delete errors.description;
+            }
+        }
+
+        // Update validation errors state
+        setValidationErrors(errors);
+
+        // Update form data if valid or if it's a field other than those being validated
         setFormData((prev) => ({
             ...prev,
             [name]: value,
         }));
+    };
+
+    const validateForm = () => {
+        const errors = {};
+        let isValid = true;
+
+        // Required field validation
+        if (!formData.name.trim()) {
+            errors.name = 'Name is required';
+            isValid = false;
+        } else if (!/^[A-Za-z\s]*$/.test(formData.name)) {
+            errors.name = 'Name should contain only letters and spaces';
+            isValid = false;
+        }
+
+        if (!formData.email.trim()) {
+            errors.email = 'Email is required';
+            isValid = false;
+        } else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) {
+                errors.email = 'Please enter a valid email address';
+                isValid = false;
+            }
+        }
+
+        if (!formData.phone.trim()) {
+            errors.phone = 'Phone is required';
+            isValid = false;
+        } else if (!/^\d+$/.test(formData.phone)) {
+            errors.phone = 'Phone should contain only numbers';
+            isValid = false;
+        } else if (formData.phone.length !== 10) {
+            errors.phone = 'Phone number must be exactly 10 digits';
+            isValid = false;
+        }
+
+        if (!formData.title.trim()) {
+            errors.title = 'Title is required';
+            isValid = false;
+        } else if (formData.title.length < 5) {
+            errors.title = 'Please enter at least 5 characters';
+            isValid = false;
+        }
+
+        if (!formData.description.trim()) {
+            errors.description = 'Description is required';
+            isValid = false;
+        } else if (formData.description.length < 10) {
+            errors.description = 'Please enter at least 10 characters';
+            isValid = false;
+        }
+
+        setValidationErrors(errors);
+        return isValid;
     };
 
     const handleSubmit = async (e) => {
@@ -36,13 +178,20 @@ const Support = () => {
         setErrorMessage('');
         setSuccessMessage('');
         
+        // Validate the form
+        if (!validateForm()) {
+            setErrorMessage('Please correct the errors in the form.');
+            setIsSubmitting(false);
+            return;
+        }
+        
         try {
             // Create a new object with the latest form data and user information
             const ticketData = {
                 ...formData,
                 user: currentUser?.id, // Directly use currentUser.id
-                name: currentUser?.username || formData.name,
-                email: currentUser?.email || formData.email,
+                // Use form input values, don't override with currentUser data
+                status: 'open', // Explicitly set status to match what admin panel expects
             };
             
             // Submit the ticket data to the backend
@@ -61,6 +210,7 @@ const Support = () => {
                 inquiry_type: 'general',
                 priority: 'low',
             });
+            setValidationErrors({});
             console.log('Support ticket submitted:', response);
         } catch (error) {
             console.error('Error submitting support ticket:', error);
@@ -163,29 +313,33 @@ const Support = () => {
                             <div>
                                 <label htmlFor="name" className="block text-gray-300 font-medium mb-2">Name</label>
                                 <input
-                                    
                                     type="text"
                                     id="name"
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
-                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full bg-gray-900/80 border ${validationErrors.name ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                 />
+                                {validationErrors.name && (
+                                    <p className="mt-1 text-sm text-red-400">{validationErrors.name}</p>
+                                )}
                             </div>
                             
                             <div>
                                 <label htmlFor="email" className="block text-gray-300 font-medium mb-2">Email</label>
                                 <input
-                                    
                                     type="email"
                                     id="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
-                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full bg-gray-900/80 border ${validationErrors.email ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                 />
+                                {validationErrors.email && (
+                                    <p className="mt-1 text-sm text-red-400">{validationErrors.email}</p>
+                                )}
                             </div>
                         </div>
                         
@@ -199,8 +353,12 @@ const Support = () => {
                                     value={formData.phone}
                                     onChange={handleChange}
                                     required
-                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Numbers only"
+                                    className={`w-full bg-gray-900/80 border ${validationErrors.phone ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                 />
+                                {validationErrors.phone && (
+                                    <p className="mt-1 text-sm text-red-400">{validationErrors.phone}</p>
+                                )}
                             </div>
                             
                             <div>
@@ -212,8 +370,11 @@ const Support = () => {
                                     value={formData.title}
                                     onChange={handleChange}
                                     required
-                                    className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full bg-gray-900/80 border ${validationErrors.title ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                                 />
+                                {validationErrors.title && (
+                                    <p className="mt-1 text-sm text-red-400">{validationErrors.title}</p>
+                                )}
                             </div>
                         </div>
                         
@@ -226,8 +387,11 @@ const Support = () => {
                                 onChange={handleChange}
                                 required
                                 rows="5"
-                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full bg-gray-900/80 border ${validationErrors.description ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                             ></textarea>
+                            {validationErrors.description && (
+                                <p className="mt-1 text-sm text-red-400">{validationErrors.description}</p>
+                            )}
                         </div>
                         
                         <div>
@@ -256,7 +420,7 @@ const Support = () => {
                                 value={formData.priority}
                                 onChange={handleChange}
                                 required
-                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                             >
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>

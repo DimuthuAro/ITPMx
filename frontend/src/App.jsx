@@ -82,7 +82,7 @@ function App() {
               <Route path="/support" element={<ProtectedRoute element={<Support />} />} />
 
               {/* Payment Routes */}
-              <Route path="/payments" element={<ProtectedRoute element={<PaymentsList />} />} />
+              <Route path="/payments" element={<ProtectedRoute element={<AdminPanel />} />} />
               <Route path="/payment/create" element={<ProtectedRoute element={<PaymentForm />} />} />
               <Route path="/pricing" element={<ProtectedRoute element={<PricePlan />} />} />
               <Route path="/profile" element={<ProtectedRoute element={<UserProfile />} />} />
